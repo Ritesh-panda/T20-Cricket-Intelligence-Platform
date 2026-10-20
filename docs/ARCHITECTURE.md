@@ -118,21 +118,26 @@ flowchart TD
 - **Tier 3 (Analytics Datasets)**: [ParquetStorageManager](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/parquet_manager.py#L17-L75) providing atomic-write (`.tmp.parquet` -> `.parquet`) columnar datasets under `data/processed/`.
 - **Provenance Ledger**: Every row in Tier 2/3 retains `provenance_id` pointing to the exact harvest event.
 
-### Module F: Cricket Named Entity Recognition & Resolution
-- **Gazetteer-Guided NER**: Combines spaCy linguistic models with a curated T20 World Cup entity gazetteer (squad rosters, player nicknames, grounds, team acronyms).
-- **Entity Resolution Engine**:
-  - Fuzzy string matching (Levenshtein distance, Jaro-Winkler).
-  - Contextual disambiguation: Resolves identical surnames (e.g., Curran, Sharma, Khan) using co-occurring team names, match dates, or squad lists.
-  - Outputs canonical `player_id` (e.g., `cricketer_virat_kohli`) with match confidence score (0.0 to 1.0).
+### Module F: Cricket Named Entity Recognition & Resolution (`src/nlp/`)
+- **Text Cleaning & Tokenization**:
+  - `CricketTextCleaner`: Normalizes HTML entities, Unicode artifacts, journalistic boilerplate while strictly preserving cricket scores (`182/5`, `82*`), overs (`19.4`), abbreviations (`DRS`, `LBW`), and negation.
+  - `CricketTokenizer`: Deterministic regex tokenization supporting overs, scores, compound phrases (`not out`, `death overs`), and acronyms (`T20`, `T20I`, `ODI`, `DLS`).
+- **Gazetteer-Guided Boundary NER (`CricketGazetteer`, `CricketNER`)**:
+  - Auditable catalog (`config/cricket_gazetteer.yaml`) enriched dynamically from canonical database records (`teams`, `players`).
+  - Boundary-aware regex execution (`\b...\b`) with longest-span priority to eliminate accidental substring matches (e.g., prevents matching "SA" inside words or "India" inside unrelated terms).
+  - Emits `EntityMentionRecord` with exact character offsets (`start_char`, `end_char`).
+- **Entity Resolution Engine (`EntityResolver`)**:
+  - Multi-signal candidate ranking separating candidate generation from decision.
+  - Contextual disambiguation: boosts ambiguous player candidates by $+0.35$ when their primary team co-occurs in document text.
+  - Conservative safety thresholds: requires final score $\ge 0.70$ and margin $\ge 0.15$ above runner-up; otherwise marks mention `AMBIGUOUS` or `UNRESOLVED` to preserve uncertainty without hallucination.
 
-### Module G: Sentiment & Vector Embeddings
-- **Domain Sentiment Analysis**:
-  - Distinguishes player performance praise/criticism from raw match outcome.
-  - Uses VADER / RoBERTa-based sentiment fine-tuned or aspect-mapped to identified entities.
-- **Vector Embeddings**:
-  - Pre-trained sentence transformers (e.g., `all-MiniLM-L6-v2` or `bge-small-en-v1.5`).
-  - Passages and commentary lines are embedded into 384-dimensional unit-normalized vectors.
-  - Stored in local memory/cache or Parquet embedding columns for zero-cloud dependency.
+### Module G: Sentiment & Framing Baselines (`src/nlp/sentiment.py`)
+- **Interpretable Domain Baselines**:
+  - Distinguishes general text tone from cricket event outcome polarity and entity-targeted framing.
+  - Bowler vs batter polarity inversion: a wicket is negative for the batting team/batter ($-0.85$), but positive for the bowler ($+0.85$).
+  - 3-token negation window: inverts and dampens score when preceded by negation triggers (`did not qualify` $\to$ `NEGATIVE`).
+  - Emits `SentimentBaselineRecord` with continuous compound score $[-1.0, +1.0]$, applied rules, and evidence tokens.
+  - Fully local, CPU-first, transparent rule/lexicon execution with zero external API dependencies.
 
 ### Module H: Clustering & Topic Modeling Pipeline
 - **Modular Model Runner**:

@@ -260,4 +260,83 @@ The goal of Phase 3 was to build a reliable, restartable, configuration-driven a
 ### 5. Next Checkpoint & Action
 Proceed to **Phase 4: Text Processing, Cricket NER & Entity Resolution**.
 
+---
+
+## Session 05: Phase 4 Plan — Text Processing, Cricket NER, Entity Resolution & Sentiment Baselines
+- **Date**: 2026-10-20
+- **Lead Role**: Senior NLP/ML Researcher & Data Engineer
+- **Current Phase**: Phase 4 (Text Processing & NLP Foundations)
+- **Status**: COMPLETED
+
+---
+
+### 1. Phase 4 Objectives Achieved
+1. Implemented a modular, reproducible, CPU-first NLP processing layer under `src/nlp/`.
+2. Built cricket-aware text cleaning and normalization strictly preserving cricket notations (`19.4`, `182/5`, `82*`, `DRS`, `LBW`, `not out`, negation).
+3. Built a deterministic cricket tokenizer supporting overs, scores, player initials, acronyms, compound phrases, and cricket expressions.
+4. Established an auditable cricket gazetteer (`config/cricket_gazetteer.yaml`) enriched dynamically from canonical database records (`teams`, `players`).
+5. Implemented hybrid named entity recognition (NER) for players, teams, tournaments, and venues with boundary-aware matching and exact character offsets.
+6. Built multi-signal entity resolution separating candidate generation from ranking, with configurable confidence thresholds ($\ge 0.70$) and ambiguity margins ($\ge 0.15$), cleanly preserving ambiguous cases without false links.
+7. Implemented interpretable, entity-targeted sentiment and performance framing baselines separating general tone, event outcome polarity, and player/team framing (including bowler/batter polarity inversion).
+8. Extended SQLite storage with Schema Version 3 migration (`normalized_texts`, `entity_mentions`, `entity_resolutions`, `sentiment_baselines`, `nlp_runs`) ensuring idempotent writes and transaction rollback.
+9. Integrated with existing CLI (`process-text`, `nlp-stats`, `nlp-validate`, `resolve-entity` with optional `--context`).
+10. Built deterministic labelled fixtures and test suites evaluating precision, recall, resolution ambiguity, and sentiment baselines.
+
+---
+
+### 2. Modules Created & Extended
+
+- [`src/nlp/schemas.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/schemas.py): Canonical Pydantic v2 schemas and enums (`EntityType`, `ResolutionStatus`, `SentimentLabel`).
+- [`src/nlp/text_cleaner.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/text_cleaner.py): `CricketTextCleaner` handling HTML unescaping, Unicode standardisation, and journalistic boilerplate removal while preserving cricket numbers and punctuation.
+- [`src/nlp/cricket_tokenizer.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/cricket_tokenizer.py): `CricketTokenizer` handling overs (`19.4`), scores (`182/5`, `82*`), compound phrases (`not out`, `death overs`), and acronyms (`T20`, `T20I`, `DRS`, `LBW`).
+- [`config/cricket_gazetteer.yaml`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/config/cricket_gazetteer.yaml): Seed gazetteer catalog with ambiguity tags.
+- [`src/nlp/gazetteer.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/gazetteer.py): `CricketGazetteer` YAML loading, SQLite synchronization, and length-prioritized regex compilation.
+- [`src/nlp/ner.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/ner.py): `CricketNER` boundary-aware entity extractor with longest-span priority.
+- [`src/nlp/entity_resolver.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/entity_resolver.py): `EntityResolver` multi-signal candidate ranker with team context cues (+0.35) and conservative thresholds.
+- [`src/nlp/sentiment.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/sentiment.py): `CricketSentimentBaseline` separating general sentiment, event polarity, and entity framing.
+- [`src/nlp/processing_pipeline.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/processing_pipeline.py): `NLPPipeline` end-to-end processing orchestrator with SQLite persistence.
+- [`src/nlp/evaluation.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/nlp/evaluation.py): Quantitative evaluation engine for precision, recall, F1, and ambiguity rates.
+- [`src/storage/sqlite_manager.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/sqlite_manager.py): Upgraded to `SCHEMA_VERSION = 3` with DDL and transactional upsert methods.
+- [`src/pipeline/cli.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/cli.py): CLI commands `process-text`, `nlp-stats`, `nlp-validate`, and `resolve-entity`.
+
+---
+
+### 3. Test Verification & Benchmark Results
+- 18 new comprehensive unit and integration tests in [`tests/test_nlp.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_nlp.py).
+- **All 53 project tests passed in 5.24s**:
+  ```text
+  tests/test_commentary_adapter.py: 2 passed
+  tests/test_cricsheet_adapter.py: 2 passed
+  tests/test_integration.py: 1 passed
+  tests/test_news_adapter.py: 1 passed
+  tests/test_nlp.py: 18 passed
+  tests/test_pipeline.py: 20 passed
+  tests/test_schemas.py: 5 passed
+  tests/test_storage.py: 4 passed
+  ======================= 53 passed, 3 warnings in 5.24s ========================
+  ```
+- **Fixture Evaluation Benchmark Metrics**:
+  - NER Precision / Recall / F1: **1.000 / 1.000 / 1.000** (Zero false positives, exact character spans verified).
+  - Unambiguous Entity Resolution: **100.0%** ($\ge 0.95$ confidence).
+  - Ambiguity Preservation: **100.0%** (isolated ambiguous surnames score 0.40, remaining `UNRESOLVED`).
+  - Contextual Disambiguation: **100.0%** (team context adds +0.35 boost $\to 0.75$, resolving accurately).
+  - Sentiment Macro-F1 on Fixtures: **1.00** (Negation inversion and bowler/batter framing verified).
+
+---
+
+### 4. Documentation Deliverables Created / Updated
+- [`docs/NLP_PIPELINE.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/NLP_PIPELINE.md): Pipeline architecture, normalizer, tokenizer, NER, resolver, and CLI.
+- [`docs/CRICKET_ENTITY_RESOLUTION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/CRICKET_ENTITY_RESOLUTION.md): Multi-signal ranking, team context cues, and ambiguity margins.
+- [`docs/SENTIMENT_BASELINES.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SENTIMENT_BASELINES.md): Sentiment baselines, negation window, event polarity vs entity framing.
+- [`docs/NLP_EVALUATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/NLP_EVALUATION.md): Quantitative benchmark metrics and fixture results.
+- [`docs/DATA_MODEL.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/DATA_MODEL.md): Updated with Schema Version 3 NLP tables.
+- [`docs/ARCHITECTURE.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ARCHITECTURE.md): Updated Modules F and G.
+- [`docs/SECURITY_AND_LICENSING.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SECURITY_AND_LICENSING.md): Updated with Section 6 (NLP Licensing & Privacy Safeguards).
+
+---
+
+### 5. Next Checkpoint & Action
+Proceed to **Phase 5: Semantic Embeddings, Topic Discovery, Alignment & Attention Analytics**.
+
+
 

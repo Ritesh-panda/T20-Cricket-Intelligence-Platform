@@ -240,6 +240,164 @@ def main() -> int:
     parser.add_argument("--db-path", default="data/cricket_intel.db", help="Path to SQLite database")
     parser.add_argument("--parquet-dir", default=None, help="Optional directory for Parquet storage")
 
+def process_text_cmd(args: argparse.Namespace) -> int:
+    """Executes the NLP pipeline on acquired texts."""
+    from src.nlp.processing_pipeline import NLPPipeline
+
+    storage = SQLiteStorageManager(args.db_path)
+    pipeline = NLPPipeline(storage=storage)
+
+    print("\nStarting Cricket NLP Pipeline...")
+    print(f"Database: {args.db_path} | Dry Run: {args.dry_run} | All Records: {args.all}\n")
+
+    metrics = pipeline.process_records(
+        source_id=args.source,
+        process_all=args.all,
+        dry_run=args.dry_run,
+        limit=args.limit,
+    )
+
+    print("-" * 60)
+    print(f"Records Processed:        {metrics.records_processed}")
+    print(f"Normalized Texts Created: {metrics.normalized_texts_created}")
+    print(f"Entity Mentions Extracted: {metrics.mentions_extracted}")
+    print(f"  - Resolved Mentions:    {metrics.mentions_resolved}")
+    print(f"  - Ambiguous Mentions:   {metrics.mentions_ambiguous}")
+    print(f"Sentiment Records:        {metrics.sentiment_records_created}")
+    print(f"Duration:                 {metrics.duration_sec:.2f}s")
+    if metrics.errors:
+        print(f"Errors Encountered:       {len(metrics.errors)} (first: {metrics.errors[0]})")
+    print("-" * 60 + "\n")
+    return 0 if not metrics.errors else 1
+
+
+def nlp_stats_cmd(args: argparse.Namespace) -> int:
+    """Reports aggregated statistics from derived NLP tables."""
+    storage = SQLiteStorageManager(args.db_path)
+    metrics = storage.get_nlp_metrics()
+
+    print("\n" + "=" * 60)
+    print("NLP & ENTITY RESOLUTION METRICS REPORT")
+    print("=" * 60)
+    print(f"Normalized Texts:        {metrics['normalized_texts_count']}")
+    print(f"Total Entity Mentions:   {metrics['total_mentions']}")
+    print(f"  - Resolved Mentions:   {metrics['resolved_mentions']}")
+    print(f"  - Ambiguous Mentions:  {metrics['ambiguous_mentions']}")
+    print(f"  - Unresolved Mentions: {metrics['unresolved_mentions']}")
+    print(f"Resolution Rate:         {metrics['resolution_rate'] * 100:.1f}%")
+    print(f"Ambiguity Rate:          {metrics['ambiguity_rate'] * 100:.1f}%")
+    print("-" * 60)
+    print(f"Sentiment Baseline Records: {metrics['total_sentiment_records']}")
+    print(f"  - Positive Sentiment:  {metrics['positive_sentiment_count']}")
+    print(f"  - Neutral Sentiment:   {metrics['neutral_sentiment_count']}")
+    print(f"  - Negative Sentiment:  {metrics['negative_sentiment_count']}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def nlp_validate_cmd(args: argparse.Namespace) -> int:
+    """Validates integrity and invariants of stored NLP outputs."""
+    storage = SQLiteStorageManager(args.db_path)
+    print("\nValidating Stored NLP Integrity...")
+
+    issues = []
+    with storage._get_connection() as conn:
+        # 1. Invalid mention spans (end_char < start_char)
+        bad_spans = conn.execute(
+            "SELECT COUNT(*) FROM entity_mentions WHERE end_char < start_char;"
+        ).fetchone()[0]
+        if bad_spans > 0:
+            issues.append(f"Found {bad_spans} entity mentions with invalid spans (end_char < start_char)")
+
+        # 2. Resolved mentions with null resolved_id
+        inconsistent_res = conn.execute(
+            "SELECT COUNT(*) FROM entity_mentions WHERE resolution_status = 'RESOLVED' AND resolved_id IS NULL;"
+        ).fetchone()[0]
+        if inconsistent_res > 0:
+            issues.append(f"Found {inconsistent_res} mentions marked RESOLVED but missing resolved_id")
+
+        # 3. Sentiment scores out of range [-1.0, 1.0]
+        bad_scores = conn.execute(
+            "SELECT COUNT(*) FROM sentiment_baselines WHERE compound_score < -1.0 OR compound_score > 1.0;"
+        ).fetchone()[0]
+        if bad_scores > 0:
+            issues.append(f"Found {bad_scores} sentiment records with compound_score outside [-1.0, 1.0]")
+
+    if not issues:
+        print("[SUCCESS] All NLP data structures, span invariants, and resolution constraints validated perfectly!\n")
+        return 0
+    else:
+        print("[WARNING] Invariant issues detected in NLP tables:")
+        for iss in issues:
+            print(f"  - {iss}")
+        print()
+        return 1
+
+
+def resolve_entity_cmd(args: argparse.Namespace) -> int:
+    """Resolves an entity mention string and displays candidate evaluations."""
+    from src.nlp.entity_resolver import EntityResolver
+    from src.nlp.gazetteer import CricketGazetteer
+    from src.nlp.schemas import EntityMentionRecord, EntityType
+
+    storage = SQLiteStorageManager(args.db_path)
+    gazetteer = CricketGazetteer(storage=storage)
+    resolver = EntityResolver(gazetteer=gazetteer)
+
+    surface = args.mention.strip()
+    mention = EntityMentionRecord(
+        mention_id="cli_query",
+        source_type="cli",
+        source_id="cli_input",
+        entity_type=EntityType.PLAYER,
+        surface_text=surface,
+        start_char=0,
+        end_char=len(surface),
+        confidence=0.5,
+    )
+
+    teams_in_doc = set()
+    context_text = getattr(args, "context", None)
+    if context_text:
+        from src.nlp.ner import CricketNER
+        ner = CricketNER(gazetteer=gazetteer)
+        context_mentions = ner.extract_mentions(context_text, source_type="cli", source_id="context")
+        for cm in context_mentions:
+            if cm.entity_type == EntityType.TEAM:
+                teams_in_doc.add(cm.surface_text.lower())
+                for entry in gazetteer.lookup_alias(cm.surface_text):
+                    if entry.entity_type == EntityType.TEAM:
+                        teams_in_doc.add(entry.canonical_id)
+
+    resolved, audits = resolver._resolve_single_mention(mention, teams_in_doc=teams_in_doc)
+
+    print("\n" + "=" * 60)
+    print(f"ENTITY RESOLUTION QUERY: '{surface}'")
+    print("=" * 60)
+    print(f"Resolution Status: {resolved.resolution_status.value}")
+    print(f"Resolved ID:       {resolved.resolved_id or 'None'}")
+    print(f"Confidence:        {resolved.confidence}")
+    print("-" * 60)
+    print(f"Candidate Evaluations ({len(audits)}):")
+    for a in audits:
+        winner_mark = "[WINNER]" if a.is_winner else "        "
+        print(f"  {winner_mark} Candidate: {a.candidate_id:<28} Score: {a.score:.3f}")
+        for k, v in a.evidence.items():
+            print(f"             - {k}: {v}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def main() -> int:
+    """CLI Entry point."""
+    parser = argparse.ArgumentParser(
+        prog="python -m src.pipeline",
+        description="T20 Cricket Intelligence Acquisition & Ingestion Pipeline CLI",
+    )
+    parser.add_argument("--config", default="config/sources.yaml", help="Path to sources.yaml configuration")
+    parser.add_argument("--db-path", default="data/cricket_intel.db", help="Path to SQLite database")
+    parser.add_argument("--parquet-dir", default=None, help="Optional directory for Parquet storage")
+
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # list
@@ -262,12 +420,26 @@ def main() -> int:
     inspect_parser.add_argument("--limit", type=int, default=50, help="Max entries to display")
 
     # validate
-    val_parser = subparsers.add_parser("validate", help="Validate relational integrity of ingested records")
+    subparsers.add_parser("validate", help="Validate relational integrity of ingested records")
 
     # smoke-test
     smoke_parser = subparsers.add_parser("smoke-test", help="Explicitly test live permitted source connectivity")
     smoke_parser.add_argument("--source", required=True, help="Source identifier to test")
     smoke_parser.add_argument("--confirm-live", action="store_true", help="Required confirmation to make live request")
+
+    # NLP commands
+    proc_parser = subparsers.add_parser("process-text", help="Run cricket NLP pipeline on acquired texts")
+    proc_parser.add_argument("--source", default=None, help="Optional source filter")
+    proc_parser.add_argument("--all", action="store_true", help="Process both news articles and commentary")
+    proc_parser.add_argument("--dry-run", action="store_true", help="Compute NLP outputs without database writes")
+    proc_parser.add_argument("--limit", type=int, default=None, help="Limit number of items to process")
+
+    subparsers.add_parser("nlp-stats", help="Show aggregated NLP and entity resolution metrics")
+    subparsers.add_parser("nlp-validate", help="Validate invariant constraints of stored NLP records")
+
+    res_parser = subparsers.add_parser("resolve-entity", help="Resolve a mention string and inspect candidate ranking")
+    res_parser.add_argument("--mention", required=True, help="Entity mention surface text to resolve")
+    res_parser.add_argument("--context", default="", help="Optional context text (e.g. sentence containing team name)")
 
     args = parser.parse_args()
 
@@ -278,6 +450,10 @@ def main() -> int:
         "inspect-failed": inspect_failed_cmd,
         "validate": validate_cmd,
         "smoke-test": smoke_test_cmd,
+        "process-text": process_text_cmd,
+        "nlp-stats": nlp_stats_cmd,
+        "nlp-validate": nlp_validate_cmd,
+        "resolve-entity": resolve_entity_cmd,
     }
 
     cmd_fn = commands.get(args.command)

@@ -175,30 +175,80 @@ erDiagram
 
 ---
 
-### 3.3 NLP Enrichment & Entity Resolution Layer
+### 3.3 NLP Enrichment & Entity Resolution Layer (Schema Version 3)
+
+Implemented in `src/storage/sqlite_manager.py` (Schema v3) and `src/nlp/schemas.py`:
+
+#### Normalized Text Entity (`normalized_texts`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `norm_id` | String (PK) | Format: `norm_{sha256(source_id + text)[:16]}` |
+| `source_type` | String | Source record type: `article`, `article_paragraph`, `commentary` |
+| `source_id` | String | Reference ID to parent raw record |
+| `raw_text` | Text | Original raw source string |
+| `clean_text` | Text | Cleaned, normalized text with preserved cricket syntax |
+| `token_count` | Integer | Deterministic token count from `CricketTokenizer` |
+| `char_count` | Integer | Clean text length in characters |
+| `cleaner_version` | String | e.g. `cricket_cleaner_v1` |
+| `created_at` | DateTime | Timestamp of normalization |
 
 #### Entity Mention Entity (`entity_mentions`)
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `mention_id` | String (PK) | Unique mention identifier |
-| `source_type` | Enum | `"article_paragraph"` or `"commentary_entry"` |
-| `source_ref_id` | String | FK to `paragraph_id` or `commentary_id` |
-| `entity_type` | Enum | `"PLAYER"`, `"TEAM"`, `"VENUE"`, `"PHASE"` |
-| `raw_surface_form`| String | Exact text in the document (e.g., `"King Kohli"`) |
-| `resolved_entity_id`| String | Resolved canonical ID (e.g., `player_virat_kohli`) |
-| `resolution_confidence`| Float | Confidence score between 0.0 and 1.0 |
-| `resolution_method`| String | `"exact_match"`, `"alias_gazetteer"`, `"fuzzy_match"`, `"contextual_disambiguation"` |
+| `mention_id` | String (PK) | Format: `men_{sha256(source_id + start_char + end_char)[:16]}` |
+| `source_type` | String | Reference source type (`article_paragraph`, `commentary`) |
+| `source_id` | String | Foreign key to parent record |
+| `entity_type` | String | `PLAYER`, `TEAM`, `TOURNAMENT`, `VENUE`, `OFFICIAL` |
+| `surface_text` | Text | Exact character sequence extracted from source text |
+| `start_char` | Integer | 0-indexed start character offset in clean text |
+| `end_char` | Integer | 0-indexed end character offset in clean text |
+| `resolved_id` | String (Nullable) | Canonical ID if resolved (e.g., `player_virat_kohli`, `IND`) |
+| `resolution_status` | String | `RESOLVED`, `AMBIGUOUS`, `UNRESOLVED`, `REJECTED` |
+| `confidence` | Float | Confidence score between 0.0 and 1.0 |
+| `resolution_id` | String (Nullable) | Foreign key to detailed `entity_resolutions` evaluation |
+| `processing_version`| String | Version string (e.g. `cricket_ner_v1`) |
+| `created_at` | DateTime | Extraction timestamp |
 
-#### Sentiment Record Entity (`sentiment_records`)
+#### Entity Resolution Entity (`entity_resolutions`)
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `sentiment_id` | String (PK) | Unique record ID |
-| `source_type` | Enum | `"article"` or `"article_paragraph"` or `"commentary_entry"` |
-| `source_ref_id` | String | Reference ID of parent text |
-| `target_entity_id`| String (Nullable) | Target player/team if aspect-based; null if document-level |
-| `compound_score` | Float | Continuous score in [-1.0, +1.0] |
-| `label` | Enum | `"POSITIVE"`, `"NEUTRAL"`, `"NEGATIVE"` |
-| `model_version` | String | Identifier of sentiment engine used (e.g. `vader_cricket_v1`) |
+| `resolution_id` | String (PK) | Format: `res_{mention_id}` |
+| `mention_id` | String (FK) | Reference to `entity_mentions.mention_id` |
+| `candidate_id` | String | Candidate canonical entity ID evaluated |
+| `score` | Float | Multi-signal ranking score |
+| `is_winner` | Boolean | True if selected as the winning canonical entity |
+| `evidence_json` | JSON/Text | Audit trail of signals (exact match, aliases, context boost) |
+| `algorithm_version` | String | e.g. `cricket_resolver_v1` |
+| `evaluated_at` | DateTime | Evaluation timestamp |
+
+#### Sentiment Baseline Entity (`sentiment_baselines`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `sentiment_id` | String (PK) | Format: `sent_{sha256(source_id + target_entity)[:16]}` |
+| `source_type` | String | Source text type (`article_paragraph`, `commentary`) |
+| `source_id` | String | Parent text reference ID |
+| `target_entity_id` | String (Nullable) | Target player/team ID for aspect framing; null if document-level |
+| `sentiment_label` | String | `POSITIVE`, `NEUTRAL`, `NEGATIVE` |
+| `compound_score` | Float | Continuous compound score in `[-1.0, +1.0]` |
+| `framing_type` | String | `general_editorial`, `batting_outcome`, `bowling_outcome` |
+| `evidence_tokens_json`| JSON/Text | Tokens that triggered sentiment scoring |
+| `rules_applied_json` | JSON/Text | Specific rules triggered (e.g., `negation_detected`) |
+| `model_version` | String | Engine version string (e.g. `cricket_lexicon_baseline_v1`) |
+| `created_at` | DateTime | Timestamp of evaluation |
+
+#### NLP Execution Run Entity (`nlp_runs`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `run_id` | String (PK) | Execution run ID (e.g. `nlp_run_20261020_215901_abc123`) |
+| `started_at` | DateTime | Start timestamp |
+| `completed_at` | DateTime | Completion timestamp |
+| `records_processed`| Integer | Total raw records processed |
+| `mentions_extracted`| Integer | Total entity mentions extracted |
+| `mentions_resolved`| Integer | Number of successfully resolved mentions |
+| `sentiment_records_created`| Integer | Number of sentiment records computed |
+| `error_count` | Integer | Total errors encountered |
+| `status` | String | `COMPLETED` or `FAILED` |
+| `notes` | Text | Run configuration notes and filters |
 
 ---
 

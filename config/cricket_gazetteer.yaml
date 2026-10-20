@@ -1,0 +1,206 @@
+# Cricket Entity Gazetteer Configuration
+# Audited entity aliases, nicknames, and abbreviations for T20 World Cup entities.
+
+version: "1.0.0"
+
+entities:
+  teams:
+    - canonical_id: "IND"
+      name: "India"
+      aliases:
+        - text: "India"
+          ambiguous: false
+        - text: "Team India"
+          ambiguous: false
+        - text: "Men in Blue"
+          ambiguous: false
+        - text: "IND"
+          ambiguous: false
+
+    - canonical_id: "SA"
+      name: "South Africa"
+      aliases:
+        - text: "South Africa"
+          ambiguous: false
+        - text: "Proteas"
+          ambiguous: false
+        - text: "SA"
+          ambiguous: false
+
+    - canonical_id: "AUS"
+      name: "Australia"
+      aliases:
+        - text: "Australia"
+          ambiguous: false
+        - text: "Aussies"
+          ambiguous: false
+        - text: "AUS"
+          ambiguous: false
+
+    - canonical_id: "ENG"
+      name: "England"
+      aliases:
+        - text: "England"
+          ambiguous: false
+        - text: "ENG"
+          ambiguous: false
+
+    - canonical_id: "PAK"
+      name: "Pakistan"
+      aliases:
+        - text: "Pakistan"
+          ambiguous: false
+        - text: "PAK"
+          ambiguous: false
+
+    - canonical_id: "WI"
+      name: "West Indies"
+      aliases:
+        - text: "West Indies"
+          ambiguous: false
+        - text: "Windies"
+          ambiguous: false
+        - text: "WI"
+          ambiguous: false
+
+    - canonical_id: "AFG"
+      name: "Afghanistan"
+      aliases:
+        - text: "Afghanistan"
+          ambiguous: false
+        - text: "AFG"
+          ambiguous: false
+
+  players:
+    - canonical_id: "player_virat_kohli"
+      full_name: "Virat Kohli"
+      primary_team_id: "IND"
+      aliases:
+        - text: "Virat Kohli"
+          ambiguous: false
+        - text: "V. Kohli"
+          ambiguous: false
+        - text: "Kohli"
+          ambiguous: false
+        - text: "King Kohli"
+          ambiguous: false
+
+    - canonical_id: "player_jasprit_bumrah"
+      full_name: "Jasprit Bumrah"
+      primary_team_id: "IND"
+      aliases:
+        - text: "Jasprit Bumrah"
+          ambiguous: false
+        - text: "J. Bumrah"
+          ambiguous: false
+        - text: "Bumrah"
+          ambiguous: false
+
+    - canonical_id: "player_rohit_sharma"
+      full_name: "Rohit Sharma"
+      primary_team_id: "IND"
+      aliases:
+        - text: "Rohit Sharma"
+          ambiguous: false
+        - text: "Rohit"
+          ambiguous: false
+        - text: "Sharma"
+          ambiguous: true
+          notes: "Ambiguous surname (Rohit Sharma, Mohit Sharma, etc.)"
+        - text: "Hitman"
+          ambiguous: false
+
+    - canonical_id: "player_heinrich_klaasen"
+      full_name: "Heinrich Klaasen"
+      primary_team_id: "SA"
+      aliases:
+        - text: "Heinrich Klaasen"
+          ambiguous: false
+        - text: "H. Klaasen"
+          ambiguous: false
+        - text: "Klaasen"
+          ambiguous: false
+
+    - canonical_id: "player_hardik_pandya"
+      full_name: "Hardik Pandya"
+      primary_team_id: "IND"
+      aliases:
+        - text: "Hardik Pandya"
+          ambiguous: false
+        - text: "Hardik"
+          ambiguous: false
+        - text: "Pandya"
+          ambiguous: true
+          notes: "Ambiguous surname (Hardik Pandya vs Krunal Pandya)"
+
+    - canonical_id: "player_travis_head"
+      full_name: "Travis Head"
+      primary_team_id: "AUS"
+      aliases:
+        - text: "Travis Head"
+          ambiguous: false
+        - text: "T. Head"
+          ambiguous: false
+        - text: "Head"
+          ambiguous: true
+          notes: "Common English word and player surname"
+
+    - canonical_id: "player_jos_buttler"
+      full_name: "Jos Buttler"
+      primary_team_id: "ENG"
+      aliases:
+        - text: "Jos Buttler"
+          ambiguous: false
+        - text: "J. Buttler"
+          ambiguous: false
+        - text: "Buttler"
+          ambiguous: false
+
+    - canonical_id: "player_rashid_khan"
+      full_name: "Rashid Khan"
+      primary_team_id: "AFG"
+      aliases:
+        - text: "Rashid Khan"
+          ambiguous: false
+        - text: "Rashid"
+          ambiguous: false
+        - text: "Khan"
+          ambiguous: true
+          notes: "Very common cricket surname"
+
+  tournaments:
+    - canonical_id: "t20_world_cup"
+      name: "ICC Men's T20 World Cup"
+      aliases:
+        - text: "ICC Men's T20 World Cup"
+          ambiguous: false
+        - text: "T20 World Cup"
+          ambiguous: false
+        - text: "Men's T20 World Cup"
+          ambiguous: false
+        - text: "T20 WC"
+          ambiguous: false
+
+  venues:
+    - canonical_id: "venue_kensington_oval"
+      name: "Kensington Oval"
+      city: "Bridgetown"
+      aliases:
+        - text: "Kensington Oval"
+          ambiguous: false
+        - text: "Bridgetown"
+          ambiguous: false
+        - text: "Barbados"
+          ambiguous: false
+
+    - canonical_id: "venue_nassau_county"
+      name: "Nassau County International Cricket Stadium"
+      city: "New York"
+      aliases:
+        - text: "Nassau County International Cricket Stadium"
+          ambiguous: false
+        - text: "Nassau County Stadium"
+          ambiguous: false
+        - text: "New York"
+          ambiguous: true
+          notes: "City name can appear outside cricket context"

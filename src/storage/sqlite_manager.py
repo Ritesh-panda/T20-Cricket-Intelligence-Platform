@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -29,8 +30,15 @@ from src.pipeline.state_machine import (
     ResourceState,
     validate_transition,
 )
+from src.nlp.schemas import (
+    EntityMentionRecord,
+    EntityResolutionRecord,
+    NLPRunRecord,
+    NormalizedTextRecord,
+    SentimentBaselineRecord,
+)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 DDL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -215,6 +223,83 @@ CREATE TABLE IF NOT EXISTS discovered_urls (
 CREATE INDEX IF NOT EXISTS idx_disc_state ON discovered_urls(state);
 CREATE INDEX IF NOT EXISTS idx_disc_source ON discovered_urls(source_id);
 CREATE INDEX IF NOT EXISTS idx_disc_canon ON discovered_urls(canonical_url);
+
+CREATE TABLE IF NOT EXISTS normalized_texts (
+    norm_id TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    original_text TEXT NOT NULL,
+    normalized_text TEXT NOT NULL,
+    char_count INTEGER NOT NULL,
+    pipeline_version TEXT NOT NULL,
+    processed_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_norm_src ON normalized_texts(source_type, source_id);
+
+CREATE TABLE IF NOT EXISTS entity_mentions (
+    mention_id TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    surface_text TEXT NOT NULL,
+    start_char INTEGER NOT NULL,
+    end_char INTEGER NOT NULL,
+    detection_method TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    resolved_id TEXT,
+    resolution_status TEXT NOT NULL,
+    evidence_json TEXT NOT NULL DEFAULT '{}',
+    pipeline_version TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_men_src ON entity_mentions(source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_men_res ON entity_mentions(resolved_id);
+
+CREATE TABLE IF NOT EXISTS entity_resolutions (
+    resolution_id TEXT PRIMARY KEY,
+    mention_id TEXT NOT NULL,
+    candidate_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    score REAL NOT NULL,
+    is_winner INTEGER NOT NULL,
+    evidence_json TEXT NOT NULL DEFAULT '{}',
+    created_at_utc TEXT NOT NULL,
+    FOREIGN KEY(mention_id) REFERENCES entity_mentions(mention_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_res_men ON entity_resolutions(mention_id);
+
+CREATE TABLE IF NOT EXISTS sentiment_baselines (
+    sentiment_id TEXT PRIMARY KEY,
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    target_entity_id TEXT,
+    general_sentiment TEXT NOT NULL,
+    event_polarity TEXT NOT NULL,
+    framing_score REAL NOT NULL,
+    compound_score REAL NOT NULL,
+    evidence_tokens_json TEXT NOT NULL DEFAULT '[]',
+    rule_applied TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    pipeline_version TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_sent_src ON sentiment_baselines(source_type, source_id);
+CREATE INDEX IF NOT EXISTS idx_sent_target ON sentiment_baselines(target_entity_id);
+
+CREATE TABLE IF NOT EXISTS nlp_runs (
+    run_id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    started_at_utc TEXT NOT NULL,
+    completed_at_utc TEXT,
+    records_processed INTEGER DEFAULT 0,
+    mentions_extracted INTEGER DEFAULT 0,
+    sentiment_scored INTEGER DEFAULT 0,
+    errors_json TEXT NOT NULL DEFAULT '[]'
+);
 """
 
 
@@ -280,7 +365,8 @@ class SQLiteStorageManager:
     def start_ingestion_run(self, source_name: str, run_id: Optional[str] = None) -> IngestionRun:
         if not run_id:
             now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-            run_id = f"run_{source_name}_{now_str}"
+            uniq = uuid.uuid4().hex[:6]
+            run_id = f"run_{source_name}_{now_str}_{uniq}"
         run = IngestionRun(run_id=run_id, source_name=source_name, status="running")
         query = """
         INSERT INTO ingestion_runs (
@@ -971,3 +1057,248 @@ class SQLiteStorageManager:
             if match_id:
                 return conn.execute("SELECT COUNT(*) FROM commentary_entries WHERE match_id = ?", (match_id,)).fetchone()[0]
             return conn.execute("SELECT COUNT(*) FROM commentary_entries").fetchone()[0]
+
+    # -------------------------------------------------------------------------
+    # NLP Processing & Derived Layer Storage
+    # -------------------------------------------------------------------------
+    def upsert_normalized_text(self, norm: NormalizedTextRecord) -> bool:
+        """Idempotently saves or updates a normalized text entry."""
+        query = """
+        INSERT INTO normalized_texts (
+            norm_id, source_type, source_id, original_text, normalized_text,
+            char_count, pipeline_version, processed_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(norm_id) DO UPDATE SET
+            normalized_text = excluded.normalized_text,
+            char_count = excluded.char_count,
+            processed_at_utc = excluded.processed_at_utc;
+        """
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                query,
+                (
+                    norm.norm_id,
+                    norm.source_type,
+                    norm.source_id,
+                    norm.original_text,
+                    norm.normalized_text,
+                    norm.char_count,
+                    norm.pipeline_version,
+                    norm.processed_at_utc.isoformat(),
+                ),
+            )
+            return cur.rowcount > 0
+
+    def upsert_entity_mentions(self, mentions: List[EntityMentionRecord]) -> int:
+        """Idempotently stores or updates entity mentions."""
+        query = """
+        INSERT INTO entity_mentions (
+            mention_id, source_type, source_id, entity_type, surface_text,
+            start_char, end_char, detection_method, confidence, resolved_id,
+            resolution_status, evidence_json, pipeline_version, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(mention_id) DO UPDATE SET
+            resolved_id = excluded.resolved_id,
+            resolution_status = excluded.resolution_status,
+            confidence = excluded.confidence,
+            evidence_json = excluded.evidence_json;
+        """
+        rows = [
+            (
+                m.mention_id,
+                m.source_type,
+                m.source_id,
+                m.entity_type.value if hasattr(m.entity_type, "value") else str(m.entity_type),
+                m.surface_text,
+                m.start_char,
+                m.end_char,
+                m.detection_method,
+                m.confidence,
+                m.resolved_id,
+                m.resolution_status.value if hasattr(m.resolution_status, "value") else str(m.resolution_status),
+                json.dumps(m.evidence),
+                m.pipeline_version,
+                m.created_at_utc.isoformat(),
+            )
+            for m in mentions
+        ]
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.executemany(query, rows)
+            return cur.rowcount
+
+    def upsert_entity_resolutions(self, resolutions: List[EntityResolutionRecord]) -> int:
+        """Idempotently stores candidate evaluation records."""
+        query = """
+        INSERT INTO entity_resolutions (
+            resolution_id, mention_id, candidate_id, entity_type, score,
+            is_winner, evidence_json, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(resolution_id) DO UPDATE SET
+            score = excluded.score,
+            is_winner = excluded.is_winner,
+            evidence_json = excluded.evidence_json;
+        """
+        rows = [
+            (
+                r.resolution_id,
+                r.mention_id,
+                r.candidate_id,
+                r.entity_type.value if hasattr(r.entity_type, "value") else str(r.entity_type),
+                r.score,
+                1 if r.is_winner else 0,
+                json.dumps(r.evidence),
+                r.created_at_utc.isoformat(),
+            )
+            for r in resolutions
+        ]
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.executemany(query, rows)
+            return cur.rowcount
+
+    def upsert_sentiment_baselines(self, sentiments: List[SentimentBaselineRecord]) -> int:
+        """Idempotently stores sentiment baseline records."""
+        query = """
+        INSERT INTO sentiment_baselines (
+            sentiment_id, source_type, source_id, target_entity_id,
+            general_sentiment, event_polarity, framing_score, compound_score,
+            evidence_tokens_json, rule_applied, confidence, pipeline_version, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(sentiment_id) DO UPDATE SET
+            general_sentiment = excluded.general_sentiment,
+            event_polarity = excluded.event_polarity,
+            framing_score = excluded.framing_score,
+            compound_score = excluded.compound_score,
+            evidence_tokens_json = excluded.evidence_tokens_json,
+            confidence = excluded.confidence;
+        """
+        rows = [
+            (
+                s.sentiment_id,
+                s.source_type,
+                s.source_id,
+                s.target_entity_id,
+                s.general_sentiment.value if hasattr(s.general_sentiment, "value") else str(s.general_sentiment),
+                s.event_polarity.value if hasattr(s.event_polarity, "value") else str(s.event_polarity),
+                s.framing_score,
+                s.compound_score,
+                json.dumps(s.evidence_tokens),
+                s.rule_applied,
+                s.confidence,
+                s.pipeline_version,
+                s.created_at_utc.isoformat(),
+            )
+            for s in sentiments
+        ]
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.executemany(query, rows)
+            return cur.rowcount
+
+    def start_nlp_run(self, run_id: Optional[str] = None) -> NLPRunRecord:
+        """Initializes a new NLP execution run audit record."""
+        if not run_id:
+            now_str = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+            uniq = uuid.uuid4().hex[:6]
+            run_id = f"nlp_run_{now_str}_{uniq}"
+        run = NLPRunRecord(run_id=run_id, status="running")
+        query = """
+        INSERT INTO nlp_runs (run_id, status, started_at_utc, records_processed, mentions_extracted, sentiment_scored, errors_json)
+        VALUES (?, ?, ?, 0, 0, 0, '[]');
+        """
+        with self._get_connection() as conn:
+            conn.execute(query, (run.run_id, run.status, run.started_at_utc.isoformat()))
+        return run
+
+    def update_nlp_run(self, run: NLPRunRecord) -> None:
+        """Updates completed NLP run statistics."""
+        completed = run.completed_at_utc.isoformat() if run.completed_at_utc else datetime.now(timezone.utc).isoformat()
+        query = """
+        UPDATE nlp_runs SET
+            status = ?,
+            completed_at_utc = ?,
+            records_processed = ?,
+            mentions_extracted = ?,
+            sentiment_scored = ?,
+            errors_json = ?
+        WHERE run_id = ?;
+        """
+        with self._get_connection() as conn:
+            conn.execute(
+                query,
+                (
+                    run.status,
+                    completed,
+                    run.records_processed,
+                    run.mentions_extracted,
+                    run.sentiment_scored,
+                    json.dumps(run.errors),
+                    run.run_id,
+                ),
+            )
+
+    def get_paragraphs_for_processing(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Retrieves raw article paragraphs for NLP processing."""
+        limit_clause = f"LIMIT {int(limit)}" if limit else ""
+        query = f"SELECT paragraph_id, article_id, paragraph_index, text, char_count FROM article_paragraphs ORDER BY article_id, paragraph_index {limit_clause};"
+        with self._get_connection() as conn:
+            return [dict(row) for row in conn.execute(query).fetchall()]
+
+    def get_commentary_for_processing(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Retrieves commentary entries for NLP processing."""
+        limit_clause = f"LIMIT {int(limit)}" if limit else ""
+        query = f"SELECT commentary_id, match_id, innings, over_num, ball_num, bowler_raw, batter_raw, text FROM commentary_entries ORDER BY match_id, innings, over_num, ball_num {limit_clause};"
+        with self._get_connection() as conn:
+            return [dict(row) for row in conn.execute(query).fetchall()]
+
+    def get_entity_mentions(
+        self,
+        source_id: Optional[str] = None,
+        entity_type: Optional[str] = None,
+        resolved_only: bool = False,
+    ) -> List[Dict[str, Any]]:
+        """Queries entity mentions with optional filters."""
+        conds = []
+        params: List[Any] = []
+        if source_id:
+            conds.append("source_id = ?")
+            params.append(source_id)
+        if entity_type:
+            conds.append("entity_type = ?")
+            params.append(entity_type)
+        if resolved_only:
+            conds.append("resolution_status = 'RESOLVED'")
+
+        where = f"WHERE {' AND '.join(conds)}" if conds else ""
+        query = f"SELECT * FROM entity_mentions {where} ORDER BY start_char ASC;"
+        with self._get_connection() as conn:
+            return [dict(row) for row in conn.execute(query, params).fetchall()]
+
+    def get_nlp_metrics(self) -> Dict[str, Any]:
+        """Calculates aggregated metrics across derived NLP tables."""
+        with self._get_connection() as conn:
+            norm_cnt = conn.execute("SELECT COUNT(*) FROM normalized_texts;").fetchone()[0]
+            men_total = conn.execute("SELECT COUNT(*) FROM entity_mentions;").fetchone()[0]
+            men_resolved = conn.execute("SELECT COUNT(*) FROM entity_mentions WHERE resolution_status = 'RESOLVED';").fetchone()[0]
+            men_ambiguous = conn.execute("SELECT COUNT(*) FROM entity_mentions WHERE resolution_status = 'AMBIGUOUS';").fetchone()[0]
+            men_unresolved = conn.execute("SELECT COUNT(*) FROM entity_mentions WHERE resolution_status = 'UNRESOLVED';").fetchone()[0]
+            sent_total = conn.execute("SELECT COUNT(*) FROM sentiment_baselines;").fetchone()[0]
+            sent_pos = conn.execute("SELECT COUNT(*) FROM sentiment_baselines WHERE general_sentiment = 'POSITIVE';").fetchone()[0]
+            sent_neg = conn.execute("SELECT COUNT(*) FROM sentiment_baselines WHERE general_sentiment = 'NEGATIVE';").fetchone()[0]
+            sent_neu = conn.execute("SELECT COUNT(*) FROM sentiment_baselines WHERE general_sentiment = 'NEUTRAL';").fetchone()[0]
+
+            return {
+                "normalized_texts_count": norm_cnt,
+                "total_mentions": men_total,
+                "resolved_mentions": men_resolved,
+                "ambiguous_mentions": men_ambiguous,
+                "unresolved_mentions": men_unresolved,
+                "resolution_rate": round(men_resolved / men_total, 3) if men_total > 0 else 0.0,
+                "ambiguity_rate": round(men_ambiguous / men_total, 3) if men_total > 0 else 0.0,
+                "total_sentiment_records": sent_total,
+                "positive_sentiment_count": sent_pos,
+                "negative_sentiment_count": sent_neg,
+                "neutral_sentiment_count": sent_neu,
+            }

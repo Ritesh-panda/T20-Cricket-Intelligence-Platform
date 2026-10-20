@@ -71,3 +71,19 @@ The Phase 3 acquisition engine incorporates defense-in-depth safeguards:
    Live endpoint verification (`python -m src.pipeline smoke-test`) is strictly disabled by default. It requires explicit confirmation (`--confirm-live`), preventing unexpected outbound network traffic during offline testing, CI builds, or sandbox runs.
 5. **Configurable Retention Controls**:
    All source records enforce a `RetentionPolicy`. Non-redistributable journalism sources store only extractive summaries, headlines, and metadata in relational storage, ensuring raw full texts are not redistributed.
+
+---
+
+## 6. NLP Processing, Model Licensing & Privacy Safeguards (Phase 4 Implementation)
+
+The Phase 4 NLP layer enforces strict data privacy, CPU-first execution, and open licensing:
+
+1. **Local-First, Offline Processing**:
+   All NLP components (`CricketTextCleaner`, `CricketTokenizer`, `CricketGazetteer`, `CricketNER`, `EntityResolver`, and `CricketSentimentBaseline`) operate 100% locally on CPU. No external cloud NLP APIs, proprietary LLMs, or telemetry endpoints are contacted.
+2. **Deterministic Gazetteers & Lexicons**:
+   The entity gazetteer and cricket sentiment lexicons were authored internally under the project's MIT license using public factual cricket information (squads, player names, tournament years). They contain no copyrighted proprietary database contents.
+3. **No Automatic Large Model Downloads**:
+   The pipeline does not trigger automatic background downloads of heavy pre-trained weights during tests or basic usage. Optional open-source transformer integrations require explicit operator opt-in.
+4. **Data Minimization & Idempotency**:
+   Normalized text and derived entities are persisted transactionally with SHA-256 content hashes. Re-processing identical raw records produces no duplicate database rows and executes zero unnecessary writes.
+
