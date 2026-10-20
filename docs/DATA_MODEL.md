@@ -345,6 +345,71 @@ Implemented in `src/storage/sqlite_manager.py` (Schema v4) and `src/analysis/ana
 
 ---
 
+### 3.6 Media Attention vs Performance Analytics Layer (Schema Version 5)
+
+#### Media Attention Metrics Entity (`attention_metrics`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `metric_id` | String (PK) | Format: `att_{entity_id}_{sha10}` |
+| `entity_id` | String | Foreign key to `players.player_id` or `teams.team_id` |
+| `entity_name` | String | Canonical display name |
+| `entity_type` | String | `player` or `team` |
+| `tournament` | String | Tournament filter e.g. `T20 World Cup 2024` |
+| `paragraph_count` | Integer | Distinct editorial paragraphs mentioning entity |
+| `raw_mention_count` | Integer | Raw occurrences of entity mentions |
+| `article_reach` | Integer | Distinct articles in available corpus mentioning entity |
+| `source_diversity_count`| Integer | Distinct publisher sources covering entity |
+| `prominence_score` | Float | Weighted position score (headline: 3.0, lead: 1.5, body: 1.0) |
+| `event_linked_mentions` | Integer | Editorial passages linked to accepted match events |
+| `raw_attention_composite`| Float | Transparent composite raw attention score |
+| `formula_version` | String | Formula and pipeline version (`6A.1.0`) |
+
+#### Performance Metrics Entity (`performance_metrics`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `metric_id` | String (PK) | Format: `perf_{entity_id}_{role}_{sha10}` |
+| `entity_id` | String | Foreign key to `players.player_id` or `teams.team_id` |
+| `role` | String | `batter`, `bowler`, `all_rounder`, `team` |
+| `tournament` | String | Tournament filter |
+| `matches_played` | Integer | Verified match appearances |
+| `runs_scored` | Integer | Runs scored off batter bat |
+| `balls_faced` | Integer | Legal balls + no-balls faced (excluding wides) |
+| `strike_rate` | Float (Nullable)| `(runs / balls_faced) * 100` |
+| `legal_balls_bowled` | Integer | Completed legal deliveries |
+| `overs_bowled` | Float | Overs representation (e.g. 4.2 overs) |
+| `runs_conceded` | Integer | Bowler charged runs (excluding byes/leg-byes) |
+| `wickets_taken` | Integer | Bowler-credited wickets |
+| `bowling_economy` | Float (Nullable)| `(runs_conceded * 6) / legal_balls` |
+| `raw_performance_composite`| Float | Role-specific transparent raw performance score |
+
+#### Attention-to-Performance Discrepancy Record (`apdi_records`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `record_id` | String (PK) | Format: `apdi_{run_id}_{entity_id}` |
+| `run_id` | String | Foreign key to `analytics_runs.run_id` |
+| `entity_id` | String | Entity ID |
+| `role_cohort` | String | Role cohort (`batter`, `bowler`, `team`) |
+| `raw_attention_score`| Float | Raw attention composite |
+| `normalized_attention_score`| Float (Nullable)| Cohort percentile rank in `[0.0, 1.0]` |
+| `raw_performance_score`| Float | Raw performance score |
+| `normalized_performance_score`| Float (Nullable)| Cohort percentile rank in `[0.0, 1.0]` |
+| `apdi_value` | Float (Nullable)| `NormAttention - NormPerformance` in `[-1.0, +1.0]` |
+| `discrepancy_category`| String | `OVER_ATTENDED`, `UNDER_ATTENDED`, `BALANCED`, `INSUFFICIENT_DATA` |
+| `evidence_sufficiency_status`| String | `VALID`, `PARTIAL_COVERAGE`, `INSUFFICIENT_DATA` |
+| `evidence_lineage_json`| JSON/Text | Complete traceable lineage to source articles, paragraphs, and matches |
+
+#### Analytics Run Entity (`analytics_runs`)
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `run_id` | String (PK) | Format: `apdi_run_{timestamp}` |
+| `status` | String | `running`, `completed`, `failed` |
+| `tournament` | String | Tournament filter |
+| `entities_processed`| Integer | Total entities evaluated |
+| `valid_apdi_count` | Integer | Valid APDI evaluations |
+| `insufficient_data_count`| Integer | Count flagged insufficient data |
+
+---
+
 ## 4. Parquet & Columnar Storage File Specifications
 
 For fast analytical queries and ML training runs, data is exported into partitioned Parquet files under `data/processed/`:
@@ -355,3 +420,4 @@ For fast analytical queries and ML training runs, data is exported into partitio
 4. `paragraphs.parquet`: Partitioned by `source_domain`. Contains paragraph text, vector embeddings (384-float array), and resolved entity IDs.
 5. `commentary.parquet`: Partitioned by `match_id`. Contains ball narrative, vector embeddings, and resolved entities.
 6. `alignments.parquet`: Cross-source links with confidence scores and evidence fields.
+

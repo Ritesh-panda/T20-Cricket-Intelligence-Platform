@@ -412,3 +412,51 @@ Proceed to **Phase 5: Semantic Embeddings, Topic Discovery, Alignment & Attentio
 ### 5. Next Checkpoint & Action
 Proceed to **Phase 6: Media Attention vs Performance Analytics, Serving API & Dashboard Presentation**.
 
+---
+
+## Session 07 — 2026-10-20 (Phase 6A: Media Attention vs Performance Analytics Engine)
+
+### 1. Objectives & Scope
+- Build an evidence-driven analytical engine that measures how media attention and narrative framing compare with actual player, team, and match performance.
+- Compute the Attention-to-Performance Discrepancy Index (APDI): $\text{APDI} = \text{NormAttention} - \text{NormPerformance}$ within role cohorts.
+- Separate attention volume, reach, publisher diversity, and prominence from objective cricket performance metrics (runs, SR, wickets, economy, match phases).
+- Implement strict data quality gates (`INSUFFICIENT_DATA` handling) and auditable lineage/evidence tracking.
+- Analytical engine and CLI only (Serving API and Frontend deferred to subsequent subphases).
+
+### 2. Implementation Plan & Completed Execution
+- **Schema & Persistence**: Upgraded to SQLite Schema Version 5 (`attention_metrics`, `performance_metrics`, `apdi_records`, `analytics_runs`).
+- **Analytics Engine**:
+  - `src/analytics/schemas.py`: Canonical analytics models (`MediaAttentionMetrics`, `CricketPerformanceMetrics`, `NarrativeFramingMetrics`, `APDIRecord`, `PreflightCheckResult`, `AnalyticsRunRecord`).
+  - `src/analytics/attention.py`: `MediaAttentionCalculator` computing paragraph volume, raw mentions, corpus reach, source diversity, prominence scoring (headline/lead/body), and event-linked mentions.
+  - `src/analytics/performance.py`: `CricketPerformanceCalculator` enforcing ICC cricket scoring semantics (extras, legal deliveries, byes/leg-byes exclusion from bowler runs, bowler-credited wickets) and role composites.
+  - `src/analytics/framing.py`: `NarrativeFramingCalculator` computing entity-targeted sentiment distributions, net framing scores, publisher breakdowns, and supporting text snippets.
+  - `src/analytics/apdi.py`: `APDICalculator` computing percentile-normalized attention and performance within role cohorts, APDI discrepancy index, and strict `INSUFFICIENT_DATA` gates.
+  - `src/analytics/preflight.py`: `AnalyticsPreflight` validating match scorecard reconciliation, canonical entities, and corpus sufficiency.
+  - `src/analytics/__init__.py`: Clean exports.
+- **CLI Subcommands** (`src/pipeline/cli.py`):
+  - `analytics-preflight`: Quality gate audit and eligibility check.
+  - `compute-attention`: Editorial attention extraction and prominence calculation.
+  - `compute-performance`: Objective batting, bowling, and team performance metrics.
+  - `compute-apdi`: Discrepancy index evaluation across cohorts.
+  - `analytics-report`: Summary leaderboard and deep evidence lineage inspection.
+  - `analytics-validate`: Structural invariant verification across all Phase 6A tables.
+- **Testing & Verification**:
+  - `tests/test_analytics.py`: 9 comprehensive test suites covering cricket invariants, attention, framing, APDI classifications (`OVER_ATTENDED`, `UNDER_ATTENDED`, `BALANCED`, `INSUFFICIENT_DATA`), and storage v5 CRUD.
+  - Full project test suite: **80 tests passed in 10.68s**.
+- **Documentation Deliverables**:
+  - `docs/MEDIA_ATTENTION_METRICS.md`
+  - `docs/PERFORMANCE_METRICS.md`
+  - `docs/APDI_METHODOLOGY.md`
+  - `docs/ANALYTICS_EVALUATION.md`
+  - `docs/DATA_MODEL.md` (Updated with Schema Version 5)
+  - `docs/ARCHITECTURE.md` (Updated with Module K: Attention vs Performance Analytics)
+
+### 3. Verification & Live Corpus Status
+- **Empty Database Truthfulness**: Verified that database currently records 0 matches, 0 deliveries, 0 articles, and 0 normalized texts.
+- **Preflight & APDI**: Correctly reports `INSUFFICIENT_DATA` rather than hallucinating speculative findings.
+- **Invariant Validation**: `python -m src.pipeline analytics-validate` passes with 0 issues.
+
+### 4. Next Checkpoint & Action
+Proceed to **Phase 6B: FastAPI Serving Layer & Analytics Endpoints**.
+
+

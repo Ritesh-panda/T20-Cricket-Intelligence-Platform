@@ -169,7 +169,25 @@ flowchart TD
 - Logs cluster metrics (Silhouette, Davies-Bouldin, cluster distributions, outlier ratio).
 - Logs NER, ER, sentiment, and alignment precision/recall/F1 against deterministic test fixtures.
 
-### Module K: API & Dashboard Architecture
+### Module K: Media Attention vs Performance Analytics Engine (Phase 6A)
+- **Media Attention Calculator (`MediaAttentionCalculator`)**:
+  - Computes paragraph volume, raw mention occurrences, article reach, source publisher diversity, and structural prominence.
+  - Links accepted match narrative alignments and temporal distribution.
+- **Cricket Performance Calculator (`CricketPerformanceCalculator`)**:
+  - Derived strictly from canonical deliveries and matches.
+  - Enforces ICC cricket scoring invariants: legal balls, extras (wides/noballs vs byes/leg-byes), and bowler-credited wickets.
+  - Computes role-specific composites and match phase breakdowns (powerplay, middle, death).
+- **Narrative Framing Calculator (`NarrativeFramingCalculator`)**:
+  - Entity-targeted sentiment breakdown, publisher-level framing variance, and topic cluster intersections.
+- **APDI Engine (`APDICalculator`)**:
+  - Role-cohort percentile normalization: $\text{PercentileRank} \in [0.0, 1.0]$.
+  - Attention-to-Performance Discrepancy Index: $\text{APDI} = \text{NormAttention} - \text{NormPerformance} \in [-1.0, +1.0]$.
+  - Discrepancy classification: `OVER_ATTENDED` ($> +0.20$), `UNDER_ATTENDED` ($< -0.20$), `BALANCED` ($[-0.20, +0.20]$), `INSUFFICIENT_DATA`.
+  - Quality gates and explainability trace tracking.
+- **Preflight Quality Checker (`AnalyticsPreflight`)**:
+  - Gatekeeper verifying entity resolution confidence, match reconciliation, and minimum data thresholds.
+
+### Module L: API & Dashboard Architecture (Subphases 6B & 6C)
 - **FastAPI Backend**: Provides asynchronous JSON endpoints with automatic OpenAPI documentation.
 - **React Frontend**: Built with Vite, TypeScript, and modern data-viz components (Chart.js / Recharts / D3).
 - **Local Proxying**: Vite development server proxies `/api` requests to FastAPI at `localhost:8000`.

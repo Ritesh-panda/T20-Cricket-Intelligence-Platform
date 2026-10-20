@@ -45,8 +45,14 @@ from src.analysis.analysis_schemas import (
     CrossSourceMatchRecord,
     NarrativeTimelinePoint,
 )
+from src.analytics.schemas import (
+    APDIRecord,
+    AnalyticsRunRecord,
+    CricketPerformanceMetrics,
+    MediaAttentionMetrics,
+)
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 DDL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -400,6 +406,125 @@ CREATE TABLE IF NOT EXISTS timeline_snapshots (
     observed_timestamps_count INTEGER NOT NULL DEFAULT 0,
     inferred_timestamps_count INTEGER NOT NULL DEFAULT 0,
     created_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS attention_metrics (
+    metric_id TEXT PRIMARY KEY,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    tournament TEXT NOT NULL,
+    window_start TEXT,
+    window_end TEXT,
+    paragraph_count INTEGER NOT NULL DEFAULT 0,
+    raw_mention_count INTEGER NOT NULL DEFAULT 0,
+    article_reach INTEGER NOT NULL DEFAULT 0,
+    source_diversity_count INTEGER NOT NULL DEFAULT 0,
+    sources_json TEXT NOT NULL DEFAULT '[]',
+    prominence_score REAL NOT NULL DEFAULT 0.0,
+    headline_mentions INTEGER NOT NULL DEFAULT 0,
+    lead_paragraph_mentions INTEGER NOT NULL DEFAULT 0,
+    body_paragraph_mentions INTEGER NOT NULL DEFAULT 0,
+    event_linked_mentions INTEGER NOT NULL DEFAULT 0,
+    temporal_distribution_json TEXT NOT NULL DEFAULT '{}',
+    article_ids_json TEXT NOT NULL DEFAULT '[]',
+    paragraph_ids_json TEXT NOT NULL DEFAULT '[]',
+    raw_attention_composite REAL NOT NULL DEFAULT 0.0,
+    formula_version TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_att_entity ON attention_metrics(entity_id);
+CREATE INDEX IF NOT EXISTS idx_att_tourn ON attention_metrics(tournament);
+
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    metric_id TEXT PRIMARY KEY,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    role TEXT NOT NULL,
+    tournament TEXT NOT NULL,
+    window_start TEXT,
+    window_end TEXT,
+    matches_played INTEGER NOT NULL DEFAULT 0,
+    innings_count INTEGER NOT NULL DEFAULT 0,
+    runs_scored INTEGER NOT NULL DEFAULT 0,
+    balls_faced INTEGER NOT NULL DEFAULT 0,
+    strike_rate REAL,
+    fours INTEGER NOT NULL DEFAULT 0,
+    sixes INTEGER NOT NULL DEFAULT 0,
+    dismissals INTEGER NOT NULL DEFAULT 0,
+    batting_average REAL,
+    legal_balls_bowled INTEGER NOT NULL DEFAULT 0,
+    overs_bowled REAL NOT NULL DEFAULT 0.0,
+    runs_conceded INTEGER NOT NULL DEFAULT 0,
+    wickets_taken INTEGER NOT NULL DEFAULT 0,
+    bowling_economy REAL,
+    bowling_average REAL,
+    bowling_strike_rate REAL,
+    wides_conceded INTEGER NOT NULL DEFAULT 0,
+    noballs_conceded INTEGER NOT NULL DEFAULT 0,
+    powerplay_runs INTEGER NOT NULL DEFAULT 0,
+    powerplay_balls INTEGER NOT NULL DEFAULT 0,
+    powerplay_wickets INTEGER NOT NULL DEFAULT 0,
+    death_runs INTEGER NOT NULL DEFAULT 0,
+    death_balls INTEGER NOT NULL DEFAULT 0,
+    death_wickets INTEGER NOT NULL DEFAULT 0,
+    team_wins INTEGER NOT NULL DEFAULT 0,
+    team_matches INTEGER NOT NULL DEFAULT 0,
+    win_percentage REAL,
+    raw_performance_composite REAL NOT NULL DEFAULT 0.0,
+    match_ids_json TEXT NOT NULL DEFAULT '[]',
+    raw_stats_json TEXT NOT NULL DEFAULT '{}',
+    formula_version TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_perf_entity ON performance_metrics(entity_id);
+CREATE INDEX IF NOT EXISTS idx_perf_role ON performance_metrics(role);
+CREATE INDEX IF NOT EXISTS idx_perf_tourn ON performance_metrics(tournament);
+
+CREATE TABLE IF NOT EXISTS apdi_records (
+    record_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    role_cohort TEXT NOT NULL,
+    tournament TEXT NOT NULL,
+    comparison_window TEXT NOT NULL,
+    raw_attention_score REAL NOT NULL,
+    normalized_attention_score REAL,
+    raw_performance_score REAL NOT NULL,
+    normalized_performance_score REAL,
+    apdi_value REAL,
+    discrepancy_category TEXT NOT NULL,
+    evidence_sufficiency_status TEXT NOT NULL,
+    sample_size_indicators_json TEXT NOT NULL DEFAULT '{}',
+    data_quality_warnings_json TEXT NOT NULL DEFAULT '[]',
+    framing_breakdown_json TEXT NOT NULL DEFAULT '{}',
+    evidence_lineage_json TEXT NOT NULL DEFAULT '{}',
+    formula_version TEXT NOT NULL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_apdi_run ON apdi_records(run_id);
+CREATE INDEX IF NOT EXISTS idx_apdi_entity ON apdi_records(entity_id);
+CREATE INDEX IF NOT EXISTS idx_apdi_cohort ON apdi_records(role_cohort);
+CREATE INDEX IF NOT EXISTS idx_apdi_cat ON apdi_records(discrepancy_category);
+
+CREATE TABLE IF NOT EXISTS analytics_runs (
+    run_id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    tournament TEXT NOT NULL,
+    entity_type TEXT,
+    cohorts_analyzed_json TEXT NOT NULL DEFAULT '[]',
+    entities_processed INTEGER NOT NULL DEFAULT 0,
+    valid_apdi_count INTEGER NOT NULL DEFAULT 0,
+    insufficient_data_count INTEGER NOT NULL DEFAULT 0,
+    warnings_json TEXT NOT NULL DEFAULT '[]',
+    started_at_utc TEXT NOT NULL,
+    completed_at_utc TEXT
 );
 """
 
@@ -1669,4 +1794,401 @@ class SQLiteStorageManager:
                 "cross_source_unresolved_count": xmatches_unresolved,
                 "timeline_snapshots_count": timeline_snaps,
             }
+
+    # -------------------------------------------------------------------------
+    # Phase 6A: Analytics Persistence & Retrieval
+    # -------------------------------------------------------------------------
+    def upsert_attention_metrics(self, record: MediaAttentionMetrics) -> bool:
+        """Idempotently saves or updates media attention metrics for an entity."""
+        query = """
+        INSERT INTO attention_metrics (
+            metric_id, entity_id, entity_name, entity_type, tournament,
+            window_start, window_end, paragraph_count, raw_mention_count,
+            article_reach, source_diversity_count, sources_json,
+            prominence_score, headline_mentions, lead_paragraph_mentions,
+            body_paragraph_mentions, event_linked_mentions,
+            temporal_distribution_json, article_ids_json, paragraph_ids_json,
+            raw_attention_composite, formula_version, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(metric_id) DO UPDATE SET
+            paragraph_count = excluded.paragraph_count,
+            raw_mention_count = excluded.raw_mention_count,
+            article_reach = excluded.article_reach,
+            source_diversity_count = excluded.source_diversity_count,
+            sources_json = excluded.sources_json,
+            prominence_score = excluded.prominence_score,
+            headline_mentions = excluded.headline_mentions,
+            lead_paragraph_mentions = excluded.lead_paragraph_mentions,
+            body_paragraph_mentions = excluded.body_paragraph_mentions,
+            event_linked_mentions = excluded.event_linked_mentions,
+            temporal_distribution_json = excluded.temporal_distribution_json,
+            article_ids_json = excluded.article_ids_json,
+            paragraph_ids_json = excluded.paragraph_ids_json,
+            raw_attention_composite = excluded.raw_attention_composite,
+            formula_version = excluded.formula_version,
+            created_at_utc = excluded.created_at_utc;
+        """
+        with self._get_connection() as conn:
+            conn.execute(
+                query,
+                (
+                    record.metric_id,
+                    record.entity_id,
+                    record.entity_name,
+                    record.entity_type,
+                    record.tournament,
+                    record.window_start,
+                    record.window_end,
+                    record.paragraph_count,
+                    record.raw_mention_count,
+                    record.article_reach,
+                    record.source_diversity_count,
+                    json.dumps(record.sources),
+                    record.prominence_score,
+                    record.headline_mentions,
+                    record.lead_paragraph_mentions,
+                    record.body_paragraph_mentions,
+                    record.event_linked_mentions,
+                    json.dumps(record.temporal_distribution),
+                    json.dumps(record.article_ids),
+                    json.dumps(record.paragraph_ids),
+                    record.raw_attention_composite,
+                    record.formula_version,
+                    record.created_at_utc.isoformat(),
+                ),
+            )
+            return True
+
+    def get_attention_metrics(self, entity_id: str, tournament: str = "T20 World Cup 2024") -> Optional[Dict[str, Any]]:
+        """Retrieves stored attention metrics for an entity."""
+        query = "SELECT * FROM attention_metrics WHERE entity_id = ? AND tournament = ?;"
+        with self._get_connection() as conn:
+            row = conn.execute(query, (entity_id, tournament)).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            d["sources"] = json.loads(d.get("sources_json") or "[]")
+            d["temporal_distribution"] = json.loads(d.get("temporal_distribution_json") or "{}")
+            d["article_ids"] = json.loads(d.get("article_ids_json") or "[]")
+            d["paragraph_ids"] = json.loads(d.get("paragraph_ids_json") or "[]")
+            return d
+
+    def get_all_attention_metrics(self, tournament: str = "T20 World Cup 2024") -> List[Dict[str, Any]]:
+        """Retrieves all stored attention metrics for a tournament."""
+        query = "SELECT * FROM attention_metrics WHERE tournament = ? ORDER BY raw_attention_composite DESC;"
+        with self._get_connection() as conn:
+            rows = conn.execute(query, (tournament,)).fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                d["sources"] = json.loads(d.get("sources_json") or "[]")
+                d["temporal_distribution"] = json.loads(d.get("temporal_distribution_json") or "{}")
+                d["article_ids"] = json.loads(d.get("article_ids_json") or "[]")
+                d["paragraph_ids"] = json.loads(d.get("paragraph_ids_json") or "[]")
+                results.append(d)
+            return results
+
+    def upsert_performance_metrics(self, record: CricketPerformanceMetrics) -> bool:
+        """Idempotently saves or updates cricket performance metrics."""
+        query = """
+        INSERT INTO performance_metrics (
+            metric_id, entity_id, entity_name, entity_type, role, tournament,
+            window_start, window_end, matches_played, innings_count, runs_scored,
+            balls_faced, strike_rate, fours, sixes, dismissals, batting_average,
+            legal_balls_bowled, overs_bowled, runs_conceded, wickets_taken,
+            bowling_economy, bowling_average, bowling_strike_rate,
+            wides_conceded, noballs_conceded, powerplay_runs, powerplay_balls,
+            powerplay_wickets, death_runs, death_balls, death_wickets,
+            team_wins, team_matches, win_percentage, raw_performance_composite,
+            match_ids_json, raw_stats_json, formula_version, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(metric_id) DO UPDATE SET
+            matches_played = excluded.matches_played,
+            innings_count = excluded.innings_count,
+            runs_scored = excluded.runs_scored,
+            balls_faced = excluded.balls_faced,
+            strike_rate = excluded.strike_rate,
+            fours = excluded.fours,
+            sixes = excluded.sixes,
+            dismissals = excluded.dismissals,
+            batting_average = excluded.batting_average,
+            legal_balls_bowled = excluded.legal_balls_bowled,
+            overs_bowled = excluded.overs_bowled,
+            runs_conceded = excluded.runs_conceded,
+            wickets_taken = excluded.wickets_taken,
+            bowling_economy = excluded.bowling_economy,
+            bowling_average = excluded.bowling_average,
+            bowling_strike_rate = excluded.bowling_strike_rate,
+            wides_conceded = excluded.wides_conceded,
+            noballs_conceded = excluded.noballs_conceded,
+            powerplay_runs = excluded.powerplay_runs,
+            powerplay_balls = excluded.powerplay_balls,
+            powerplay_wickets = excluded.powerplay_wickets,
+            death_runs = excluded.death_runs,
+            death_balls = excluded.death_balls,
+            death_wickets = excluded.death_wickets,
+            team_wins = excluded.team_wins,
+            team_matches = excluded.team_matches,
+            win_percentage = excluded.win_percentage,
+            raw_performance_composite = excluded.raw_performance_composite,
+            match_ids_json = excluded.match_ids_json,
+            raw_stats_json = excluded.raw_stats_json,
+            formula_version = excluded.formula_version,
+            created_at_utc = excluded.created_at_utc;
+        """
+        with self._get_connection() as conn:
+            conn.execute(
+                query,
+                (
+                    record.metric_id,
+                    record.entity_id,
+                    record.entity_name,
+                    record.entity_type,
+                    record.role.value if hasattr(record.role, "value") else str(record.role),
+                    record.tournament,
+                    record.window_start,
+                    record.window_end,
+                    record.matches_played,
+                    record.innings_count,
+                    record.runs_scored,
+                    record.balls_faced,
+                    record.strike_rate,
+                    record.fours,
+                    record.sixes,
+                    record.dismissals,
+                    record.batting_average,
+                    record.legal_balls_bowled,
+                    record.overs_bowled,
+                    record.runs_conceded,
+                    record.wickets_taken,
+                    record.bowling_economy,
+                    record.bowling_average,
+                    record.bowling_strike_rate,
+                    record.wides_conceded,
+                    record.noballs_conceded,
+                    record.powerplay_runs,
+                    record.powerplay_balls,
+                    record.powerplay_wickets,
+                    record.death_runs,
+                    record.death_balls,
+                    record.death_wickets,
+                    record.team_wins,
+                    record.team_matches,
+                    record.win_percentage,
+                    record.raw_performance_composite,
+                    json.dumps(record.match_ids),
+                    record.raw_stats_json,
+                    record.formula_version,
+                    record.created_at_utc.isoformat(),
+                ),
+            )
+            return True
+
+    def get_performance_metrics(
+        self, entity_id: str, role: Optional[str] = None, tournament: str = "T20 World Cup 2024"
+    ) -> Optional[Dict[str, Any]]:
+        """Retrieves stored performance metrics for an entity."""
+        if role:
+            query = "SELECT * FROM performance_metrics WHERE entity_id = ? AND role = ? AND tournament = ?;"
+            params = (entity_id, role, tournament)
+        else:
+            query = "SELECT * FROM performance_metrics WHERE entity_id = ? AND tournament = ?;"
+            params = (entity_id, tournament)
+
+        with self._get_connection() as conn:
+            row = conn.execute(query, params).fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            d["match_ids"] = json.loads(d.get("match_ids_json") or "[]")
+            d["raw_stats"] = json.loads(d.get("raw_stats_json") or "{}")
+            return d
+
+    def get_all_performance_metrics(
+        self, role: Optional[str] = None, tournament: str = "T20 World Cup 2024"
+    ) -> List[Dict[str, Any]]:
+        """Retrieves all stored performance metrics for a cohort and tournament."""
+        if role:
+            query = "SELECT * FROM performance_metrics WHERE role = ? AND tournament = ? ORDER BY raw_performance_composite DESC;"
+            params = (role, tournament)
+        else:
+            query = "SELECT * FROM performance_metrics WHERE tournament = ? ORDER BY raw_performance_composite DESC;"
+            params = (tournament,)
+
+        with self._get_connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                d["match_ids"] = json.loads(d.get("match_ids_json") or "[]")
+                d["raw_stats"] = json.loads(d.get("raw_stats_json") or "{}")
+                results.append(d)
+            return results
+
+    def save_apdi_records(self, records: List[APDIRecord]) -> int:
+        """Persists a batch of APDI records transactionally."""
+        if not records:
+            return 0
+
+        query = """
+        INSERT INTO apdi_records (
+            record_id, run_id, entity_id, entity_name, entity_type,
+            role_cohort, tournament, comparison_window, raw_attention_score,
+            normalized_attention_score, raw_performance_score,
+            normalized_performance_score, apdi_value, discrepancy_category,
+            evidence_sufficiency_status, sample_size_indicators_json,
+            data_quality_warnings_json, framing_breakdown_json,
+            evidence_lineage_json, formula_version, created_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(record_id) DO UPDATE SET
+            normalized_attention_score = excluded.normalized_attention_score,
+            normalized_performance_score = excluded.normalized_performance_score,
+            apdi_value = excluded.apdi_value,
+            discrepancy_category = excluded.discrepancy_category,
+            evidence_sufficiency_status = excluded.evidence_sufficiency_status,
+            sample_size_indicators_json = excluded.sample_size_indicators_json,
+            data_quality_warnings_json = excluded.data_quality_warnings_json,
+            framing_breakdown_json = excluded.framing_breakdown_json,
+            evidence_lineage_json = excluded.evidence_lineage_json,
+            formula_version = excluded.formula_version,
+            created_at_utc = excluded.created_at_utc;
+        """
+        rows = [
+            (
+                r.record_id,
+                r.run_id,
+                r.entity_id,
+                r.entity_name,
+                r.entity_type,
+                r.role_cohort.value if hasattr(r.role_cohort, "value") else str(r.role_cohort),
+                r.tournament,
+                r.comparison_window,
+                r.raw_attention_score,
+                r.normalized_attention_score,
+                r.raw_performance_score,
+                r.normalized_performance_score,
+                r.apdi_value,
+                r.discrepancy_category.value if hasattr(r.discrepancy_category, "value") else str(r.discrepancy_category),
+                r.evidence_sufficiency_status.value if hasattr(r.evidence_sufficiency_status, "value") else str(r.evidence_sufficiency_status),
+                json.dumps(r.sample_size_indicators),
+                json.dumps(r.data_quality_warnings),
+                json.dumps(r.framing_breakdown),
+                json.dumps(r.evidence_lineage),
+                r.formula_version,
+                r.created_at_utc.isoformat(),
+            )
+            for r in records
+        ]
+
+        with self._get_connection() as conn:
+            conn.executemany(query, rows)
+            return len(records)
+
+    def get_apdi_records(
+        self,
+        run_id: Optional[str] = None,
+        tournament: Optional[str] = None,
+        entity_id: Optional[str] = None,
+        role_cohort: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Retrieves stored APDI records matching optional filters."""
+        query = "SELECT * FROM apdi_records WHERE 1=1"
+        params: List[Any] = []
+
+        if run_id:
+            query += " AND run_id = ?"
+            params.append(run_id)
+        if tournament:
+            query += " AND tournament = ?"
+            params.append(tournament)
+        if entity_id:
+            query += " AND entity_id = ?"
+            params.append(entity_id)
+        if role_cohort:
+            query += " AND role_cohort = ?"
+            params.append(role_cohort)
+
+        query += " ORDER BY apdi_value DESC NULLS LAST;"
+
+        with self._get_connection() as conn:
+            rows = conn.execute(query, params).fetchall()
+            results = []
+            for r in rows:
+                d = dict(r)
+                d["sample_size_indicators"] = json.loads(d.get("sample_size_indicators_json") or "{}")
+                d["data_quality_warnings"] = json.loads(d.get("data_quality_warnings_json") or "[]")
+                d["framing_breakdown"] = json.loads(d.get("framing_breakdown_json") or "{}")
+                d["evidence_lineage"] = json.loads(d.get("evidence_lineage_json") or "{}")
+                results.append(d)
+            return results
+
+    def record_analytics_run(self, record: AnalyticsRunRecord) -> bool:
+        """Persists metadata for an analytical execution run."""
+        query = """
+        INSERT INTO analytics_runs (
+            run_id, status, tournament, entity_type, cohorts_analyzed_json,
+            entities_processed, valid_apdi_count, insufficient_data_count,
+            warnings_json, started_at_utc, completed_at_utc
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(run_id) DO UPDATE SET
+            status = excluded.status,
+            entities_processed = excluded.entities_processed,
+            valid_apdi_count = excluded.valid_apdi_count,
+            insufficient_data_count = excluded.insufficient_data_count,
+            warnings_json = excluded.warnings_json,
+            completed_at_utc = excluded.completed_at_utc;
+        """
+        with self._get_connection() as conn:
+            conn.execute(
+                query,
+                (
+                    record.run_id,
+                    record.status,
+                    record.tournament,
+                    record.entity_type,
+                    json.dumps(record.cohorts_analyzed),
+                    record.entities_processed,
+                    record.valid_apdi_count,
+                    record.insufficient_data_count,
+                    json.dumps(record.warnings),
+                    record.started_at_utc.isoformat(),
+                    record.completed_at_utc.isoformat() if record.completed_at_utc else None,
+                ),
+            )
+            return True
+
+    def get_analytics_summary(self, tournament: Optional[str] = None) -> Dict[str, Any]:
+        """Provides summary metrics across Phase 6A analytics tables."""
+        with self._get_connection() as conn:
+            if tournament:
+                att_count = conn.execute("SELECT COUNT(*) FROM attention_metrics WHERE tournament = ?;", (tournament,)).fetchone()[0]
+                perf_count = conn.execute("SELECT COUNT(*) FROM performance_metrics WHERE tournament = ?;", (tournament,)).fetchone()[0]
+                apdi_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ?;", (tournament,)).fetchone()[0]
+                over_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'OVER_ATTENDED';", (tournament,)).fetchone()[0]
+                under_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'UNDER_ATTENDED';", (tournament,)).fetchone()[0]
+                bal_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'BALANCED';", (tournament,)).fetchone()[0]
+                ins_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'INSUFFICIENT_DATA';", (tournament,)).fetchone()[0]
+            else:
+                att_count = conn.execute("SELECT COUNT(*) FROM attention_metrics;").fetchone()[0]
+                perf_count = conn.execute("SELECT COUNT(*) FROM performance_metrics;").fetchone()[0]
+                apdi_count = conn.execute("SELECT COUNT(*) FROM apdi_records;").fetchone()[0]
+                over_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE discrepancy_category = 'OVER_ATTENDED';").fetchone()[0]
+                under_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE discrepancy_category = 'UNDER_ATTENDED';").fetchone()[0]
+                bal_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE discrepancy_category = 'BALANCED';").fetchone()[0]
+                ins_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE discrepancy_category = 'INSUFFICIENT_DATA';").fetchone()[0]
+
+            runs_count = conn.execute("SELECT COUNT(*) FROM analytics_runs;").fetchone()[0]
+
+            return {
+                "tournament": tournament or "all",
+                "attention_metrics_count": att_count,
+                "performance_metrics_count": perf_count,
+                "apdi_records_count": apdi_count,
+                "over_attended_count": over_count,
+                "under_attended_count": under_count,
+                "balanced_count": bal_count,
+                "insufficient_data_count": ins_count,
+                "analytics_runs_count": runs_count,
+            }
+
 
