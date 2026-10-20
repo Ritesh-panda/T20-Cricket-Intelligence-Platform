@@ -117,3 +117,74 @@ None of the 9 candidate repositories address:
 ### 6. Next Checkpoint & Action
 Proceed to **Phase 2: Canonical Schemas, Storage Setup & Source Adapters**.
 
+---
+
+## Session 03: Canonical Schemas, Storage Layer & Initial Source Adapters
+- **Date**: 2026-10-20
+- **Lead Role**: Senior Data Engineer & Open-Source Integration Architect
+- **Current Phase**: Phase 2 (Schemas, Storage & Adapters)
+- **Status**: COMPLETED
+
+---
+
+### 1. Context & Objective
+The goal was to implement a tested, local-first data foundation supporting structured match deliveries from Cricsheet, ball-by-ball natural language commentary, and permitted cricket news articles, grounded in canonical entities and strict schema validation.
+
+---
+
+### 2. Actions Taken & Components Implemented
+
+1. **Canonical Pydantic v2 Models** ([`src/models/canonical.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py)):
+   - Implemented 10 versioned models: `SourceRecord`, `IngestionRun`, `TeamRecord`, `PlayerRecord`, `DeliveryRecord`, `MatchRecord`, `CommentaryRecord`, `ArticleRecord`, `ArticleParagraphRecord`, `EventAlignmentRecord`.
+   - Built strict model validators: total runs cross-check (`total_runs == batter_runs + extra_runs`), required dismissed player validation on wickets, and 64-char SHA-256 fingerprint verification.
+
+2. **Local-First Storage Layer** ([`src/storage/`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage)):
+   - [`SQLiteStorageManager`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/sqlite_manager.py): WAL-mode transactional persistence for metadata, provenance audit trails, and relational tables. Enforces idempotent ingestion and article deduplication over canonical URLs and raw content hashes.
+   - [`ParquetStorageManager`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/parquet_manager.py): Columnar Apache Parquet tables for deliveries and matches with atomic writes (`.tmp.parquet` -> `.parquet`).
+
+3. **Source Adapters** ([`src/adapters/`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters)):
+   - [`BaseSourceAdapter`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/base.py): Base adapter enforcing polite rate limits, exponential backoff retries, and robots.txt parsing.
+   - [`CricsheetAdapter`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/cricsheet_adapter.py): Ingests official Cricsheet 1.1.0/1.2.0 JSON, resolves player registry IDs, assigns match phases (`powerplay`, `middle`, `death`), and performs score reconciliation.
+   - [`CommentaryAdapter`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/commentary_adapter.py): Deterministic line grammar parser with event milestone tagger (`FOUR`, `SIX`, `WICKET`, `DRS`, `FIFTY`) and Cricbuzz Next.js streaming JSON extractor.
+   - [`NewsArticleAdapter`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/news_adapter.py): Article extractor using Trafilatura with BeautifulSoup4 DOM fallback and paragraph segmentation.
+
+4. **Testing Suite** ([`tests/`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests)):
+   - Created test fixtures under `tests/fixtures/`: `cricsheet_sample_t20.json`, `cricsheet_malformed.json`, `sample_commentary.txt`, `sample_article.html`.
+   - Created `pytest.ini` isolating test runs from `research_sources/`.
+   - Executed 15 test cases across 6 test modules with **100% passing rate** (`15 passed in 5.30s`).
+
+---
+
+### 3. Test Execution Results
+```
+tests/test_commentary_adapter.py::test_parse_commentary_text_lines PASSED [  6%]
+tests/test_commentary_adapter.py::test_cricbuzz_nextjs_payload_parsing PASSED [ 13%]
+tests/test_cricsheet_adapter.py::test_parse_valid_cricsheet_fixture PASSED [ 20%]
+tests/test_cricsheet_adapter.py::test_parse_malformed_cricsheet_fixture PASSED [ 26%]
+tests/test_integration.py::test_full_ingestion_and_provenance_pipeline PASSED [ 33%]
+tests/test_news_adapter.py::test_parse_sample_news_article PASSED        [ 40%]
+tests/test_schemas.py::test_team_record_validation PASSED                [ 46%]
+tests/test_schemas.py::test_player_record_creation PASSED                [ 53%]
+tests/test_schemas.py::test_delivery_record_validation PASSED            [ 60%]
+tests/test_schemas.py::test_source_record_sha256 PASSED                  [ 66%]
+tests/test_schemas.py::test_article_record_id_generation PASSED          [ 73%]
+tests/test_storage.py::test_sqlite_provenance_deduplication PASSED       [ 80%]
+tests/test_storage.py::test_sqlite_match_and_delivery_roundtrip PASSED   [ 86%]
+tests/test_storage.py::test_sqlite_article_deduplication PASSED          [ 93%]
+tests/test_storage.py::test_parquet_storage_roundtrip PASSED             [100%]
+======================= 15 passed, 2 warnings in 5.30s ========================
+```
+
+---
+
+### 4. Known Format Limitations & Data Gaps Documented
+1. **Cricsheet Registry Gaps**: Occasionally older Cricsheet files omit `info.registry.people` or player hand/bowling style. Our adapter falls back cleanly to deterministic name slugs (`player_{clean_name}`) and leaves styles nullable.
+2. **Commentary Delivery Indexing**: Live commentary liveblogs often do not report exact legal delivery indexes when multiple wides or no-balls occur consecutively. We resolve this by indexing sequentially per over (`deliv_ov{over}_b{idx}`).
+3. **News Article Byline Heterogeneity**: Some publishers use syndicated wire tags or omit bylines. Trafilatura and BS4 fallbacks extract metadata from OpenGraph and HTML5 `<time>` tags, storing `None` when unavailable rather than fabricating.
+
+---
+
+### 5. Next Checkpoint & Action
+Proceed to **Phase 3: Acquisition, Extraction Pipeline & Idempotent Ingestion**.
+
+

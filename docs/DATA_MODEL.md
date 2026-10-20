@@ -6,17 +6,36 @@ The platform operates on a **canonical schema layer**. Disparate data sources (C
 
 ### Core Modeling Principles
 1. **Deterministic Unique Identifiers**:
-   - Matches: `match_{tournament}_{date}_{teamA}_{teamB}` (e.g., `match_t20wc2024_20240609_ind_pak`) or Cricsheet match ID.
-   - Players: `player_{clean_first_last}` (e.g., `player_jasprit_bumrah`).
-   - Articles: `art_{sha256_of_url}`.
-   - Commentary: `comm_{match_id}_{innings}_{over}_{ball}`.
-   - Deliveries: `deliv_{match_id}_{innings}_{over}_{ball}`.
+   - Matches: `cric_{match_id}` or `cric_{date}_{team1}_{team2}`.
+   - Players: `player_{clean_first_last}` (e.g., `player_virat_kohli`) resolved via Cricsheet registry.
+   - Articles: `art_{sha256(canonical_url)[:16]}`.
+   - Commentary: `comm_{match_id}_inn{inn}_ov{over}_b{ball}`.
+   - Deliveries: `del_{match_id}_inn{inn}_ov{over}_b{ball}`.
+   - Paragraphs: `{article_id}_p{index}`.
+   - Alignments: `align_{paragraph_id}_{match_id}_inn{inn}_ov{over}`.
 2. **Immutability of Facts**: Match scores and delivery outcomes are ground-truth facts and immutable.
-3. **Traceability (Provenance)**: Every text snippet, entity resolution, and sentiment score carries an explicit foreign key back to its source record and model version.
+3. **Traceability (Provenance)**: Every text snippet, entity resolution, and sentiment score carries an explicit foreign key (`provenance_id`) referencing an immutable `SourceRecord`.
+4. **Validation Gates**: Deliveries enforce `total_runs == batter_runs + extra_runs` and require `player_dismissed_id` when `is_wicket=True`. Articles deduplicate on `canonical_url` and `raw_content_hash`.
 
 ---
 
-## 2. Entity-Relationship Overview
+## 2. Implemented Schema Architecture (`src/models/canonical.py`)
+
+The platform implements 10 core Pydantic v2 models:
+- [SourceRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L38-L58): Immutable provenance audit record with SHA-256 fingerprinting.
+- [IngestionRun](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L61-L71): Pipeline execution tracker recording extracted, ingested, and skipped counts.
+- [TeamRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L74-L86): Canonical team identity with uppercase code and alias lists.
+- [PlayerRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L89-L98): Canonical player identity with Cricsheet registry ID mapping.
+- [DeliveryRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L101-L129): Structured delivery outcome with phase categorization (`powerplay`, `middle`, `death`, `super_over`) and strict total run cross-checks.
+- [MatchRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L132-L151): Ground-truth match scorecard facts and metadata.
+- [CommentaryRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L154-L168): Ball narrative with automated milestone and event tags (`FOUR`, `SIX`, `WICKET`, `DRS`, `FIFTY`).
+- [ArticleRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L182-L202): News article document with canonical URL hashing and content SHA-256 deduplication.
+- [ArticleParagraphRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L171-L179): Discrete paragraph segment for fine-grained NLP and event alignment.
+- [EventAlignmentRecord](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py#L205-L217): Traceable semantic link with confidence score and evidence dictionary.
+
+---
+
+## 3. Entity-Relationship Overview
 
 ```mermaid
 erDiagram
@@ -46,7 +65,7 @@ erDiagram
 
 ---
 
-## 3. Detailed Entity Schemas (Pydantic / Relational DDL)
+## 4. Detailed Entity Schemas (Pydantic / Relational DDL)
 
 ### 3.1 Match Fact Layer (Cricsheet / Structured Data)
 

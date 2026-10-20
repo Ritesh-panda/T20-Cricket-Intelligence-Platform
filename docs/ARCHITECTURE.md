@@ -84,19 +84,19 @@ flowchart TD
 
 ### Module A: Source Registry & Adapter Framework
 - **Role**: Discovers, fetches, and archives source documents while observing rate limits and robot exclusions.
-- **Key Classes**:
-  - `BaseSourceAdapter`: Abstract interface defining `fetch_recent()`, `fetch_by_url()`, and `parse_robots()`.
-  - `CricsheetAdapter`: Ingests open match JSON files for ball-by-ball facts.
-  - `PublisherArticleAdapter`: Generic configurable adapter for news sources using sitemaps and feed discovery.
-  - `PublisherCommentaryAdapter`: Extracts over-by-over written commentary entries.
-- **Contract**: Accepts source configuration; emits `RawHarvestRecord` containing raw payload, timestamp, response headers, and source URL.
+- **Implemented Classes**:
+  - [BaseSourceAdapter](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/base.py#L24-L125): Abstract interface defining polite rate limits, exponential retries, and `is_url_allowed_by_robots()`.
+  - [CricsheetAdapter](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/cricsheet_adapter.py#L52-L305): Ingests official Cricsheet match JSON, resolves registry IDs, and reconciles scorecard facts.
+  - [CommentaryAdapter](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/commentary_adapter.py#L38-L177): Combines deterministic line grammar parsing with Cricbuzz Next.js JSON streaming payload extraction.
+  - [NewsArticleAdapter](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/adapters/news_adapter.py#L24-L185): Robust news article extraction using Trafilatura with BeautifulSoup4 DOM fallbacks.
+- **Contract**: Accepts source configuration; emits `SourceRecord` containing content SHA-256 fingerprint, license tag, and harvest timestamp.
 
 ### Module B: Crawling, Rate Limiting & Storage
 - **Role**: Manages polite HTTP requests, exponential backoff, connection pooling, and disk persistence.
-- **Components**:
-  - `TokenBucketLimiter`: Enforces per-domain requests per second (RPS) limits.
-  - `IdempotentManifest`: Tracks SHA-256 hashes of fetched URLs to prevent redundant network trips.
-  - `RawDataSink`: Writes immutable records to `data/raw/{source_name}/{date}/{record_id}.jsonl.gz`.
+- **Implemented Mechanics**:
+  - `_enforce_rate_limit()`: Enforces configurable per-domain request rates (default <= 0.5 req/sec).
+  - Exponential backoff with jitter on HTTP 429 and 5xx responses.
+  - Robots.txt parsing and path verification.
 
 ### Module C: Article & Commentary Extraction
 - **Role**: Parses unstructured HTML/JSON into normalized text structures.
@@ -107,14 +107,16 @@ flowchart TD
 
 ### Module D: Canonical Validation & Normalization
 - **Role**: Enforces uniform typed schemas and rejects corrupt, incomplete, or duplicate records.
-- **Validation**: Pydantic v2 schemas (`ArticleRecord`, `CommentaryRecord`, `MatchRecord`, `DeliveryRecord`).
-- **Deduplication**: Computes content fingerprint (SHA-256 of lowercase alphanumeric text); flags cross-publisher duplicate syndication.
+- **Validation**: Pydantic v2 schemas in [`src/models/canonical.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/models/canonical.py):
+  - Strict totals check: `total_runs == batter_runs + extra_runs`.
+  - Wicket dismissal check: requires `player_dismissed_id` when `is_wicket=True`.
+- **Deduplication**: Content fingerprinting (SHA-256 over clean body text) and unique `canonical_url` constraints.
 
 ### Module E: Canonical Storage & Lineage
-- **Tier 1 (Raw Archive)**: Compressed immutable raw files (`data/raw/`).
-- **Tier 2 (Relational Metadata)**: SQLite / PostgreSQL for relational joins, entities, and foreign-key integrity.
-- **Tier 3 (Analytics Datasets)**: Columnar Apache Parquet files (`data/processed/articles.parquet`, `commentary.parquet`, `deliveries.parquet`) optimized for vectorized NLP and clustering workflows.
-- **Provenance Ledger**: Every row in Tier 2/3 retains `source_id`, `harvest_run_id`, `extractor_version`, and `raw_payload_ref`.
+- **Tier 1 (Raw Archive)**: Immutable audit records in `source_records` table with raw SHA-256 fingerprints.
+- **Tier 2 (Relational Metadata)**: [SQLiteStorageManager](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/sqlite_manager.py#L182-L390) providing transaction-safe, WAL-mode SQLite tables.
+- **Tier 3 (Analytics Datasets)**: [ParquetStorageManager](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/parquet_manager.py#L17-L75) providing atomic-write (`.tmp.parquet` -> `.parquet`) columnar datasets under `data/processed/`.
+- **Provenance Ledger**: Every row in Tier 2/3 retains `provenance_id` pointing to the exact harvest event.
 
 ### Module F: Cricket Named Entity Recognition & Resolution
 - **Gazetteer-Guided NER**: Combines spaCy linguistic models with a curated T20 World Cup entity gazetteer (squad rosters, player nicknames, grounds, team acronyms).
