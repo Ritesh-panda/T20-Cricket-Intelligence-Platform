@@ -1,35 +1,127 @@
-# Source Configuration for T20 Cricket Intelligence Platform
-# Controls allowed domains, discovery endpoints, rate limits, and parser options
+# Source Registry Configuration for T20 Cricket Intelligence Platform
+# Defines permitted sources, discovery endpoints, rate limits, adapters, and data retention policies.
 
 sources:
   cricsheet:
-    type: open_dataset
-    format: json
+    source_id: "cricsheet"
+    name: "Cricsheet T20 Open Data"
+    category: "structured_data"
     base_url: "https://cricsheet.org/downloads/t20s_json.zip"
+    discovery_endpoints:
+      - "https://cricsheet.org/matches/"
+    adapter_id: "cricsheet"
     enabled: true
-    rate_limit_rps: 0.0 # Local file ingestion
+    rate_limit_rps: 0.0 # Local file / batch ingestion
+    request_timeout_sec: 30
+    max_retries: 3
+    max_response_bytes: 52428800 # 50 MB
+    supported_content_types:
+      - "application/json"
+      - "application/zip"
+      - "application/octet-stream"
+      - "text/html"
+      - "application/xhtml+xml"
+    retention_policy:
+      store_full_text: true
+      store_summary_only: false
+      redistributable: true
+    license_tag: "ODbL-1.0"
+    licence_notes: "Open Database License (ODbL) 1.0. Attribution required: Cricsheet.org. Ground-truth ball-by-ball facts."
+    allowed_domains:
+      - "cricsheet.org"
+    custom_metadata:
+      competition: "ICC Men's T20 World Cup"
+      data_format: "cricsheet_json_v1.2.0"
 
   espncricinfo:
-    type: publisher_news
-    domain: "espncricinfo.com"
-    robots_url: "https://www.espncricinfo.com/robots.txt"
-    sitemap_url: "https://www.espncricinfo.com/sitemap.xml"
+    source_id: "espncricinfo"
+    name: "ESPNcricinfo News & Match Reviews"
+    category: "news"
+    base_url: "https://www.espncricinfo.com"
+    discovery_endpoints:
+      - "https://www.espncricinfo.com/rss/content/story/feeds/6.xml"
+      - "https://www.espncricinfo.com/sitemap.xml"
+    adapter_id: "news"
+    enabled: true
     rate_limit_rps: 0.5
     request_timeout_sec: 15
-    enabled: true
+    max_retries: 3
+    max_response_bytes: 10485760 # 10 MB
+    supported_content_types:
+      - "text/html"
+      - "application/xhtml+xml"
+      - "application/rss+xml"
+      - "text/xml"
+      - "application/xml"
+    retention_policy:
+      store_full_text: false
+      store_summary_only: true
+      redistributable: false
+    license_tag: "FairUse-ResearchExtraction"
+    licence_notes: "Strict research extraction only. Do not redistribute full article text. Preserve extractive summaries and canonical URLs."
+    allowed_domains:
+      - "www.espncricinfo.com"
+      - "espncricinfo.com"
+    custom_metadata:
+      robots_url: "https://www.espncricinfo.com/robots.txt"
 
   cricbuzz:
-    type: publisher_news_and_commentary
-    domain: "cricbuzz.com"
-    robots_url: "https://www.cricbuzz.com/robots.txt"
+    source_id: "cricbuzz"
+    name: "Cricbuzz Ball-by-Ball Commentary"
+    category: "commentary"
+    base_url: "https://www.cricbuzz.com"
+    discovery_endpoints:
+      - "https://www.cricbuzz.com/cricket-match/live-scores"
+    adapter_id: "commentary"
+    enabled: true
     rate_limit_rps: 0.33
     request_timeout_sec: 15
-    enabled: true
+    max_retries: 3
+    max_response_bytes: 10485760
+    supported_content_types:
+      - "text/html"
+      - "application/json"
+      - "application/xhtml+xml"
+    retention_policy:
+      store_full_text: false
+      store_summary_only: true
+      redistributable: false
+    license_tag: "FairUse-ResearchExtraction"
+    licence_notes: "Extract factual ball-by-ball commentary lines and milestone tags for academic sports intelligence."
+    allowed_domains:
+      - "www.cricbuzz.com"
+      - "cricbuzz.com"
+    custom_metadata:
+      robots_url: "https://www.cricbuzz.com/robots.txt"
 
   wisden:
-    type: publisher_editorial
-    domain: "wisden.com"
-    robots_url: "https://wisden.com/robots.txt"
+    source_id: "wisden"
+    name: "Wisden Cricket Editorial & Analysis"
+    category: "news"
+    base_url: "https://wisden.com"
+    discovery_endpoints:
+      - "https://wisden.com/feed"
+      - "https://wisden.com/sitemap.xml"
+    adapter_id: "news"
+    enabled: true
     rate_limit_rps: 0.5
     request_timeout_sec: 15
-    enabled: true
+    max_retries: 3
+    max_response_bytes: 10485760
+    supported_content_types:
+      - "text/html"
+      - "application/xhtml+xml"
+      - "application/rss+xml"
+      - "text/xml"
+      - "application/xml"
+    retention_policy:
+      store_full_text: false
+      store_summary_only: true
+      redistributable: false
+    license_tag: "FairUse-ResearchExtraction"
+    licence_notes: "Editorial opinion essays and match analyses. Fair use research extraction only."
+    allowed_domains:
+      - "wisden.com"
+      - "www.wisden.com"
+    custom_metadata:
+      robots_url: "https://wisden.com/robots.txt"

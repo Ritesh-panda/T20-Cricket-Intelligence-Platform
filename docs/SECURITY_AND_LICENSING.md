@@ -54,3 +54,20 @@ All candidate repositories and external dependencies must comply with the platfo
   - `.env` is permanently excluded via `.gitignore`.
   - Python configuration is managed strictly via `pydantic-settings`, reading from environment variables at startup and failing fast if mandatory values are absent.
 - **Static Analysis**: Pre-commit hooks and CI pipelines must run secret scanning (e.g., `detect-secrets` or `gitleaks`) to prevent accidental leaks.
+
+---
+
+## 5. Acquisition Pipeline Safeguards (Phase 3 Implementation)
+
+The Phase 3 acquisition engine incorporates defense-in-depth safeguards:
+
+1. **Redirect Boundary Enforcement**:
+   The HTTP fetcher explicitly tracks redirect chains. If an HTTP 301/302 response redirects to a domain not explicitly present in the source's `allowed_domains` list, the request is immediately aborted with a `DisallowedRedirectError`.
+2. **Strict Response-Size Bounding**:
+   Outbound requests stream responses in chunks. If the cumulative byte count exceeds `max_response_bytes` (e.g., 10MB for articles, 50MB for open dataset archives), the stream is terminated immediately with `ResponseTooLargeError` to prevent memory exhaustion or zip bomb attacks.
+3. **MIME Content-Type Validation**:
+   Responses are validated against declared `supported_content_types` before payload processing commences. Disallowed binary or unexpected MIME types trigger `ContentTypeMismatchError`.
+4. **Guarded Live Smoke Testing**:
+   Live endpoint verification (`python -m src.pipeline smoke-test`) is strictly disabled by default. It requires explicit confirmation (`--confirm-live`), preventing unexpected outbound network traffic during offline testing, CI builds, or sandbox runs.
+5. **Configurable Retention Controls**:
+   All source records enforce a `RetentionPolicy`. Non-redistributable journalism sources store only extractive summaries, headlines, and metadata in relational storage, ensuring raw full texts are not redistributed.

@@ -24,8 +24,13 @@ from src.models.canonical import (
     SourceRecord,
     TeamRecord,
 )
+from src.pipeline.state_machine import (
+    DiscoveredUrlRecord,
+    ResourceState,
+    validate_transition,
+)
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 DDL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -178,6 +183,38 @@ CREATE INDEX IF NOT EXISTS idx_comm_match ON commentary_entries(match_id, inning
 CREATE INDEX IF NOT EXISTS idx_align_match ON event_alignments(match_id);
 CREATE INDEX IF NOT EXISTS idx_art_url ON articles(canonical_url);
 CREATE INDEX IF NOT EXISTS idx_art_hash ON articles(raw_content_hash);
+
+CREATE TABLE IF NOT EXISTS article_revisions (
+    revision_id TEXT PRIMARY KEY,
+    article_id TEXT NOT NULL,
+    revised_at_utc TEXT NOT NULL,
+    old_content_hash TEXT NOT NULL,
+    new_content_hash TEXT NOT NULL,
+    provenance_id TEXT,
+    FOREIGN KEY(article_id) REFERENCES articles(article_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS discovered_urls (
+    url_id TEXT PRIMARY KEY,
+    source_id TEXT NOT NULL,
+    raw_url TEXT NOT NULL,
+    canonical_url TEXT UNIQUE NOT NULL,
+    state TEXT NOT NULL,
+    discovered_at_utc TEXT NOT NULL,
+    last_attempt_at_utc TEXT,
+    completed_at_utc TEXT,
+    attempt_count INTEGER DEFAULT 0,
+    http_status INTEGER,
+    etag TEXT,
+    last_modified TEXT,
+    content_hash TEXT,
+    error_message TEXT,
+    metadata_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_disc_state ON discovered_urls(state);
+CREATE INDEX IF NOT EXISTS idx_disc_source ON discovered_urls(source_id);
+CREATE INDEX IF NOT EXISTS idx_disc_canon ON discovered_urls(canonical_url);
 """
 
 
@@ -455,6 +492,113 @@ class SQLiteStorageManager:
             cursor.executemany(p_insert, p_rows)
             return True, article.article_id
 
+    def upsert_article_with_paragraphs(
+        self,
+        article: ArticleRecord,
+        paragraphs: List[ArticleParagraphRecord],
+        allow_update: bool = True,
+    ) -> Tuple[bool, str, str]:
+        """
+        Idempotent insertion or update of an article and its paragraphs in a single transaction.
+        Distinguishes duplicate content from a legitimate source update.
+        Returns: (applied: bool, status_msg: str, article_id: str)
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT article_id, raw_content_hash FROM articles WHERE canonical_url = ?",
+                (article.canonical_url,),
+            )
+            existing_url = cursor.fetchone()
+
+            if existing_url:
+                existing_id = existing_url["article_id"]
+                existing_hash = existing_url["raw_content_hash"]
+                if existing_hash == article.raw_content_hash:
+                    return False, f"Duplicate: content hash identical for {existing_id}", existing_id
+
+                if not allow_update:
+                    return False, f"Duplicate canonical_url for {existing_id} (updates disallowed)", existing_id
+
+                # Legitimate content update for an existing article
+                rev_id = f"rev_{existing_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
+                rev_insert = """
+                INSERT INTO article_revisions (
+                    revision_id, article_id, revised_at_utc, old_content_hash, new_content_hash, provenance_id
+                ) VALUES (?, ?, ?, ?, ?, ?);
+                """
+                cursor.execute(
+                    rev_insert,
+                    (
+                        rev_id,
+                        existing_id,
+                        datetime.now(timezone.utc).isoformat(),
+                        existing_hash,
+                        article.raw_content_hash,
+                        article.provenance_id,
+                    ),
+                )
+
+                art_update = """
+                UPDATE articles SET
+                    headline = ?,
+                    author = ?,
+                    published_at_utc = ?,
+                    source_domain = ?,
+                    full_text = ?,
+                    summary = ?,
+                    language = ?,
+                    raw_content_hash = ?,
+                    provenance_id = ?
+                WHERE article_id = ?;
+                """
+                pub_date = article.published_at_utc.isoformat() if article.published_at_utc else None
+                cursor.execute(
+                    art_update,
+                    (
+                        article.headline,
+                        article.author,
+                        pub_date,
+                        article.source_domain,
+                        article.full_text,
+                        article.summary,
+                        article.language,
+                        article.raw_content_hash,
+                        article.provenance_id,
+                        existing_id,
+                    ),
+                )
+
+                cursor.execute("DELETE FROM article_paragraphs WHERE article_id = ?", (existing_id,))
+                p_insert = """
+                INSERT INTO article_paragraphs (
+                    paragraph_id, article_id, paragraph_index, text, char_count
+                ) VALUES (?, ?, ?, ?, ?);
+                """
+                p_rows = [
+                    (p.paragraph_id, existing_id, p.paragraph_index, p.text, p.char_count)
+                    for p in paragraphs
+                ]
+                cursor.executemany(p_insert, p_rows)
+                return True, f"Updated: revised content applied to {existing_id}", existing_id
+
+            # Canonical URL not yet seen; check for identical content hash under another URL
+            cursor.execute(
+                "SELECT article_id FROM articles WHERE raw_content_hash = ?",
+                (article.raw_content_hash,),
+            )
+            existing_hash_match = cursor.fetchone()
+            if existing_hash_match:
+                return (
+                    False,
+                    f"Duplicate: content hash matches {existing_hash_match['article_id']}",
+                    existing_hash_match["article_id"],
+                )
+
+            # Brand new article
+            inserted, art_id = self.insert_article_with_paragraphs(article, paragraphs)
+            return inserted, "Inserted new article", art_id
+
     # -------------------------------------------------------------------------
     # Commentary Entries
     # -------------------------------------------------------------------------
@@ -490,6 +634,48 @@ class SQLiteStorageManager:
             return cur.rowcount
 
     # -------------------------------------------------------------------------
+    # Match Deliveries Replacement (for revised match data)
+    # -------------------------------------------------------------------------
+    def replace_deliveries_for_match(self, match_id: str, deliveries: List[DeliveryRecord]) -> int:
+        """Atomically replaces deliveries for a revised match."""
+        del_query = "DELETE FROM deliveries WHERE match_id = ?;"
+        insert_query = """
+        INSERT INTO deliveries (
+            delivery_id, match_id, innings, over_num, ball_num, batter_id, bowler_id,
+            non_striker_id, batter_runs, extra_runs, extra_type, total_runs,
+            is_legal, is_wicket, wicket_kind, player_dismissed_id, phase
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(delivery_id) DO NOTHING;
+        """
+        rows = [
+            (
+                d.delivery_id,
+                d.match_id,
+                d.innings,
+                d.over,
+                d.ball,
+                d.batter_id,
+                d.bowler_id,
+                d.non_striker_id,
+                d.batter_runs,
+                d.extra_runs,
+                d.extra_type,
+                d.total_runs,
+                1 if d.is_legal else 0,
+                1 if d.is_wicket else 0,
+                d.wicket_kind,
+                d.player_dismissed_id,
+                d.phase.value if isinstance(d.phase, Enum) else str(d.phase),
+            )
+            for d in deliveries
+        ]
+        with self._get_connection() as conn:
+            cur = conn.cursor()
+            cur.execute(del_query, (match_id,))
+            cur.executemany(insert_query, rows)
+            return cur.rowcount
+
+    # -------------------------------------------------------------------------
     # Event Alignments
     # -------------------------------------------------------------------------
     def insert_alignments(self, alignments: List[EventAlignmentRecord]) -> int:
@@ -521,6 +707,247 @@ class SQLiteStorageManager:
             cur = conn.cursor()
             cur.executemany(query, rows)
             return cur.rowcount
+
+    # -------------------------------------------------------------------------
+    # Discovered URLs and State Machine Operations
+    # -------------------------------------------------------------------------
+    def record_discovered_urls(self, urls: List[DiscoveredUrlRecord]) -> Tuple[int, int]:
+        """
+        Idempotently inserts newly discovered URLs.
+        Returns: (new_count, existing_count)
+        """
+        insert_query = """
+        INSERT INTO discovered_urls (
+            url_id, source_id, raw_url, canonical_url, state, discovered_at_utc,
+            attempt_count, metadata_json
+        ) VALUES (?, ?, ?, ?, ?, ?, 0, ?)
+        ON CONFLICT(canonical_url) DO NOTHING;
+        """
+        new_count = 0
+        existing_count = 0
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            for u in urls:
+                cursor.execute(
+                    insert_query,
+                    (
+                        u.url_id,
+                        u.source_id,
+                        u.raw_url,
+                        u.canonical_url,
+                        u.state.value if isinstance(u.state, Enum) else str(u.state),
+                        u.discovered_at_utc.isoformat(),
+                        json.dumps(u.metadata),
+                    ),
+                )
+                if cursor.rowcount > 0:
+                    new_count += 1
+                else:
+                    existing_count += 1
+        return new_count, existing_count
+
+    def transition_url_state(
+        self,
+        url_id: str,
+        new_state: ResourceState | str,
+        http_status: Optional[int] = None,
+        etag: Optional[str] = None,
+        last_modified: Optional[str] = None,
+        content_hash: Optional[str] = None,
+        error_message: Optional[str] = None,
+        increment_attempt: bool = False,
+    ) -> None:
+        """Transitions a URL to a new state with transition validation and audit fields."""
+        dest_state = ResourceState(new_state) if isinstance(new_state, str) else new_state
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT state, attempt_count FROM discovered_urls WHERE url_id = ?", (url_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise KeyError(f"URL with id {url_id} not found in discovered_urls")
+
+            curr_state = ResourceState(row["state"])
+            validate_transition(curr_state, dest_state)
+
+            now_iso = datetime.now(timezone.utc).isoformat()
+            completed_iso = now_iso if dest_state in (ResourceState.INGESTED, ResourceState.SKIPPED, ResourceState.FAILED) else None
+
+            attempt_increment_sql = "attempt_count = attempt_count + 1," if increment_attempt else ""
+
+            update_query = f"""
+            UPDATE discovered_urls SET
+                state = ?,
+                last_attempt_at_utc = ?,
+                completed_at_utc = COALESCE(?, completed_at_utc),
+                {attempt_increment_sql}
+                http_status = COALESCE(?, http_status),
+                etag = COALESCE(?, etag),
+                last_modified = COALESCE(?, last_modified),
+                content_hash = COALESCE(?, content_hash),
+                error_message = ?
+            WHERE url_id = ?;
+            """
+            cursor.execute(
+                update_query,
+                (
+                    dest_state.value,
+                    now_iso,
+                    completed_iso,
+                    http_status,
+                    etag,
+                    last_modified,
+                    content_hash,
+                    error_message,
+                    url_id,
+                ),
+            )
+
+    def get_urls_by_state(
+        self,
+        source_id: Optional[str] = None,
+        state: Optional[ResourceState] = None,
+        limit: Optional[int] = None,
+    ) -> List[DiscoveredUrlRecord]:
+        """Queries discovered_urls by state and source."""
+        conditions = []
+        params: List[Any] = []
+        if source_id:
+            conditions.append("source_id = ?")
+            params.append(source_id)
+        if state:
+            conditions.append("state = ?")
+            params.append(state.value if isinstance(state, Enum) else str(state))
+
+        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        limit_clause = f"LIMIT {int(limit)}" if limit else ""
+        query = f"SELECT * FROM discovered_urls {where_clause} ORDER BY discovered_at_utc ASC {limit_clause};"
+
+        records: List[DiscoveredUrlRecord] = []
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            for row in cursor.fetchall():
+                records.append(
+                    DiscoveredUrlRecord(
+                        url_id=row["url_id"],
+                        source_id=row["source_id"],
+                        raw_url=row["raw_url"],
+                        canonical_url=row["canonical_url"],
+                        state=ResourceState(row["state"]),
+                        discovered_at_utc=datetime.fromisoformat(row["discovered_at_utc"]),
+                        last_attempt_at_utc=datetime.fromisoformat(row["last_attempt_at_utc"]) if row["last_attempt_at_utc"] else None,
+                        completed_at_utc=datetime.fromisoformat(row["completed_at_utc"]) if row["completed_at_utc"] else None,
+                        attempt_count=row["attempt_count"],
+                        http_status=row["http_status"],
+                        etag=row["etag"],
+                        last_modified=row["last_modified"],
+                        content_hash=row["content_hash"],
+                        error_message=row["error_message"],
+                        metadata=json.loads(row["metadata_json"] or "{}"),
+                    )
+                )
+        return records
+
+    def get_url_by_canonical(self, canonical_url: str) -> Optional[DiscoveredUrlRecord]:
+        """Finds a tracked URL by its canonical URL."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM discovered_urls WHERE canonical_url = ?", (canonical_url,))
+            row = cursor.fetchone()
+            if not row:
+                return None
+            return DiscoveredUrlRecord(
+                url_id=row["url_id"],
+                source_id=row["source_id"],
+                raw_url=row["raw_url"],
+                canonical_url=row["canonical_url"],
+                state=ResourceState(row["state"]),
+                discovered_at_utc=datetime.fromisoformat(row["discovered_at_utc"]),
+                last_attempt_at_utc=datetime.fromisoformat(row["last_attempt_at_utc"]) if row["last_attempt_at_utc"] else None,
+                completed_at_utc=datetime.fromisoformat(row["completed_at_utc"]) if row["completed_at_utc"] else None,
+                attempt_count=row["attempt_count"],
+                http_status=row["http_status"],
+                etag=row["etag"],
+                last_modified=row["last_modified"],
+                content_hash=row["content_hash"],
+                error_message=row["error_message"],
+                metadata=json.loads(row["metadata_json"] or "{}"),
+            )
+
+    def reset_retryable_urls(self, source_id: Optional[str] = None) -> int:
+        """Resets RETRY_PENDING or FAILED URLs back to QUEUED for resumption."""
+        params: List[Any] = [ResourceState.QUEUED.value]
+        source_filter = ""
+        if source_id:
+            source_filter = "AND source_id = ?"
+            params.append(source_id)
+
+        query = f"""
+        UPDATE discovered_urls
+        SET state = ?
+        WHERE state IN ('RETRY_PENDING', 'FAILED') {source_filter};
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            return cursor.rowcount
+
+    def get_source_metrics(self, source_id: Optional[str] = None) -> Dict[str, Any]:
+        """Aggregates ingestion quality and operational metrics per source."""
+        source_filter = "WHERE source_id = ?" if source_id else ""
+        params = [source_id] if source_id else []
+
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            # 1. State counts
+            state_query = f"""
+            SELECT state, COUNT(*) as cnt
+            FROM discovered_urls
+            {source_filter}
+            GROUP BY state;
+            """
+            cursor.execute(state_query, params)
+            state_counts = {row["state"]: row["cnt"] for row in cursor.fetchall()}
+
+            # 2. Total attempts and failures
+            agg_query = f"""
+            SELECT
+                COUNT(*) as total_discovered,
+                COALESCE(SUM(attempt_count), 0) as total_attempts,
+                COALESCE(SUM(CASE WHEN http_status >= 400 THEN 1 ELSE 0 END), 0) as http_errors,
+                COALESCE(SUM(CASE WHEN error_message IS NOT NULL THEN 1 ELSE 0 END), 0) as total_errors
+            FROM discovered_urls
+            {source_filter};
+            """
+            cursor.execute(agg_query, params)
+            agg = cursor.fetchone()
+
+            # 3. Entity counts
+            articles_cnt = cursor.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+            revisions_cnt = cursor.execute("SELECT COUNT(*) FROM article_revisions").fetchone()[0]
+            matches_cnt = cursor.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
+            deliveries_cnt = cursor.execute("SELECT COUNT(*) FROM deliveries").fetchone()[0]
+            commentary_cnt = cursor.execute("SELECT COUNT(*) FROM commentary_entries").fetchone()[0]
+
+            return {
+                "source_id": source_id or "all_sources",
+                "total_discovered": agg["total_discovered"],
+                "total_attempts": agg["total_attempts"],
+                "http_errors": agg["http_errors"],
+                "total_errors": agg["total_errors"],
+                "states": state_counts,
+                "ingested": state_counts.get(ResourceState.INGESTED.value, 0),
+                "skipped": state_counts.get(ResourceState.SKIPPED.value, 0),
+                "failed": state_counts.get(ResourceState.FAILED.value, 0),
+                "retry_pending": state_counts.get(ResourceState.RETRY_PENDING.value, 0),
+                "queued": state_counts.get(ResourceState.QUEUED.value, 0),
+                "articles_stored": articles_cnt,
+                "article_revisions": revisions_cnt,
+                "matches_stored": matches_cnt,
+                "deliveries_stored": deliveries_cnt,
+                "commentary_stored": commentary_cnt,
+            }
 
     # -------------------------------------------------------------------------
     # Query Helpers for Verification

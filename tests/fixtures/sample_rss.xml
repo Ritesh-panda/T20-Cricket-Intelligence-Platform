@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>ESPNcricinfo Cricket News</title>
+    <link>https://www.espncricinfo.com</link>
+    <description>Latest cricket stories, match previews and reports</description>
+    <language>en-gb</language>
+    <item>
+      <title>India clinch thrilling T20 World Cup final against South Africa</title>
+      <link>https://www.espncricinfo.com/story/india-vs-south-africa-final-report-1411166?utm_source=rss&amp;utm_medium=feed&amp;ref=hp</link>
+      <description>Kohli and Bumrah star as India seal seven-run victory in Barbados.</description>
+      <pubDate>Sat, 29 Jun 2024 18:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Rohit Sharma announces retirement from T20 internationals</title>
+      <link>https://www.espncricinfo.com/story/rohit-sharma-retires-from-t20is-1411167?utm_campaign=breaking</link>
+      <description>Indian captain walks away from format on a high after World Cup triumph.</description>
+      <pubDate>Sat, 29 Jun 2024 20:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

@@ -187,4 +187,77 @@ tests/test_storage.py::test_parquet_storage_roundtrip PASSED             [100%]
 ### 5. Next Checkpoint & Action
 Proceed to **Phase 3: Acquisition, Extraction Pipeline & Idempotent Ingestion**.
 
+---
+
+## Session 04: Acquisition Pipeline, Crawling, Discovery & Idempotent Ingestion
+- **Date**: 2026-10-20
+- **Lead Role**: Senior Data Engineer & Open-Source Integration Architect
+- **Current Phase**: Phase 3 (Acquisition Pipeline & Idempotent Ingestion)
+- **Status**: COMPLETED
+
+---
+
+### 1. Context & Objective
+The goal of Phase 3 was to build a reliable, restartable, configuration-driven acquisition pipeline that discovers permitted cricket data sources across three independent tracks (A: Cricsheet structured data, B: ball-by-ball commentary, C: cricket journalism & reviews), normalizes and validates them through the existing adapters, and persists them idempotently without duplicates.
+
+---
+
+### 2. Components Implemented & Extended
+
+1. **Source Registry & Configuration** ([`src/pipeline/config.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/config.py), [`config/sources.yaml`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/config/sources.yaml)):
+   - Strongly-typed Pydantic model `SourceConfig` with fields for `source_id`, `category` (`structured_data`, `commentary`, `news`), `base_url`, `discovery_endpoints`, `adapter_id`, `rate_limit_rps`, `request_timeout_sec`, `max_retries`, `max_response_bytes`, `supported_content_types`, `retention_policy`, `license_tag`, `licence_notes`, and `allowed_domains`.
+   - Populated profiles for Cricsheet, ESPNcricinfo, Cricbuzz, and Wisden.
+
+2. **URL Normalizer & Discovery Engine** ([`src/pipeline/url_normalizer.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/url_normalizer.py), [`src/pipeline/discovery.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/discovery.py)):
+   - Canonical URL normalizer stripping marketing/tracking query parameters (`utm_*`, `fbclid`, `ref`) and structural fragments (`#comments`) while preserving resource-distinguishing parameters (`match_id`, `story_id`).
+   - Parsers for RSS 2.0/Atom XML feeds, XML sitemaps, sitemap indices, Cricsheet download directories, and approved HTML listing pages.
+   - Pre-download deduplication across discovery endpoints.
+
+3. **Responsible Fetcher** ([`src/pipeline/fetcher.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/fetcher.py)):
+   - Polite HTTP fetcher with explicit connect/read timeouts and inter-request rate limiting.
+   - Bounded retries with exponential backoff and jitter on 5xx responses.
+   - HTTP 429 `Retry-After` parsing (supporting seconds and RFC 2822 dates).
+   - Conditional requests via `ETag` (`If-None-Match`) and `Last-Modified` (`If-Modified-Since`), returning HTTP 304.
+   - Streaming response size enforcement (aborting payloads exceeding `max_response_bytes`).
+   - Redirect chain domain verification (`DisallowedRedirectError`).
+   - Per-domain cached `robots.txt` enforcement.
+
+4. **Acquisition State Machine & Storage Extensions** ([`src/pipeline/state_machine.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/state_machine.py), [`src/storage/sqlite_manager.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/sqlite_manager.py)):
+   - Explicit 9-state resource lifecycle: `DISCOVERED`, `QUEUED`, `FETCHED`, `PARSED`, `VALIDATED`, `INGESTED`, `SKIPPED`, `RETRY_PENDING`, `FAILED`.
+   - Transition validation raising `IllegalStateTransitionError` on illegal hops.
+   - SQLite tables: `discovered_urls` and `article_revisions` (schema version upgraded to 2).
+   - Idempotent article upserts: exact hash matches skipped; content revisions stored in `article_revisions` while preserving canonical `article_id`.
+   - Atomic replacement of deliveries for revised matches (`replace_deliveries_for_match`).
+
+5. **Entity & Match Linking** ([`src/pipeline/entity_linker.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/entity_linker.py)):
+   - Multi-signal heuristic linker connecting unstructured text to ground-truth matches using team co-occurrence (+0.45), date proximity (+0.15 to +0.35), tournament mention (+0.10 to +0.15), and venue (+0.05 to +0.10).
+   - Confidence threshold gate ($\ge 0.65$) and ambiguity margin ($\ge 0.15$), leaving ambiguous records unresolved to prevent false claims.
+
+6. **Acquisition Orchestrator & CLI** ([`src/pipeline/orchestrator.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/orchestrator.py), [`src/pipeline/cli.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/cli.py)):
+   - Complete lifecycle runner with transactional error isolation and dry-run mode.
+   - CLI commands: `list`, `run`, `stats`, `inspect-failed`, `validate`, and guarded `smoke-test` (requiring `--confirm-live`).
+
+---
+
+### 3. Test Verification & Smoke Test Results
+- Extended test suite with 20 new tests in [`tests/test_pipeline.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_pipeline.py) covering URL normalization, RSS/sitemap parsing, retry/backoff, 429 handling, content-type checks, redirect security, deduplication, legitimate updates, transaction rollback, and entity linking.
+- **Total Test Results**: **35 passed, 0 failed in 6.41s** across 7 test modules.
+- **Live Smoke Test Outcome**:
+  - `cricsheet` endpoint (`https://cricsheet.org/matches/`) tested live with explicit `--confirm-live`.
+  - Result: HTTP 200, Robots.txt check ALLOWED, 16,215 bytes received in 0.24s.
+  - Smoke test guard successfully blocked unconfirmed live invocations.
+
+---
+
+### 4. Documentation Deliverables
+- [`docs/ACQUISITION_PIPELINE.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ACQUISITION_PIPELINE.md): Pipeline architecture, state machine, deduplication, entity linking, and CLI operations.
+- [`docs/SOURCE_CONFIGURATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SOURCE_CONFIGURATION.md): Source registry schema, source parameters, rate limits, and retention policies.
+- [`docs/DATA_QUALITY.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/DATA_QUALITY.md): Quality dimensions, invariants, metrics, failure analysis, and honest coverage reporting.
+- [`docs/SECURITY_AND_LICENSING.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SECURITY_AND_LICENSING.md): Updated with Section 5 (Pipeline Safeguards & Retention Controls).
+
+---
+
+### 5. Next Checkpoint & Action
+Proceed to **Phase 4: Text Processing, Cricket NER & Entity Resolution**.
+
 
