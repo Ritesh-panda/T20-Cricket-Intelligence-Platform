@@ -1,0 +1,35 @@
+# Source Configuration for T20 Cricket Intelligence Platform
+# Controls allowed domains, discovery endpoints, rate limits, and parser options
+
+sources:
+  cricsheet:
+    type: open_dataset
+    format: json
+    base_url: "https://cricsheet.org/downloads/t20s_json.zip"
+    enabled: true
+    rate_limit_rps: 0.0 # Local file ingestion
+
+  espncricinfo:
+    type: publisher_news
+    domain: "espncricinfo.com"
+    robots_url: "https://www.espncricinfo.com/robots.txt"
+    sitemap_url: "https://www.espncricinfo.com/sitemap.xml"
+    rate_limit_rps: 0.5
+    request_timeout_sec: 15
+    enabled: true
+
+  cricbuzz:
+    type: publisher_news_and_commentary
+    domain: "cricbuzz.com"
+    robots_url: "https://www.cricbuzz.com/robots.txt"
+    rate_limit_rps: 0.33
+    request_timeout_sec: 15
+    enabled: true
+
+  wisden:
+    type: publisher_editorial
+    domain: "wisden.com"
+    robots_url: "https://wisden.com/robots.txt"
+    rate_limit_rps: 0.5
+    request_timeout_sec: 15
+    enabled: true
