@@ -37,8 +37,16 @@ from src.nlp.schemas import (
     NormalizedTextRecord,
     SentimentBaselineRecord,
 )
+from src.analysis.analysis_schemas import (
+    EmbeddingMetadataRecord,
+    TopicRunRecord,
+    TopicClusterRecord,
+    TopicAssignmentRecord,
+    CrossSourceMatchRecord,
+    NarrativeTimelinePoint,
+)
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 DDL_SCHEMA = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -299,6 +307,99 @@ CREATE TABLE IF NOT EXISTS nlp_runs (
     mentions_extracted INTEGER DEFAULT 0,
     sentiment_scored INTEGER DEFAULT 0,
     errors_json TEXT NOT NULL DEFAULT '[]'
+);
+
+CREATE TABLE IF NOT EXISTS embedding_records (
+    embedding_id TEXT PRIMARY KEY,
+    norm_id TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    model_version TEXT NOT NULL,
+    dimension INTEGER NOT NULL,
+    text_hash TEXT NOT NULL,
+    is_test_double INTEGER NOT NULL DEFAULT 0,
+    vector_file_path TEXT,
+    vector_index INTEGER,
+    created_at_utc TEXT NOT NULL,
+    FOREIGN KEY(norm_id) REFERENCES normalized_texts(norm_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_emb_norm ON embedding_records(norm_id);
+CREATE INDEX IF NOT EXISTS idx_emb_model ON embedding_records(model_version);
+
+CREATE TABLE IF NOT EXISTS topic_runs (
+    run_id TEXT PRIMARY KEY,
+    corpus_type TEXT NOT NULL,
+    algorithm TEXT NOT NULL,
+    n_clusters_requested INTEGER,
+    n_clusters_found INTEGER NOT NULL,
+    n_noise_points INTEGER NOT NULL DEFAULT 0,
+    parameters_json TEXT NOT NULL DEFAULT '{}',
+    silhouette_score REAL,
+    davies_bouldin_index REAL,
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS topic_clusters (
+    cluster_id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    cluster_index INTEGER NOT NULL,
+    topic_label TEXT NOT NULL,
+    keywords_json TEXT NOT NULL DEFAULT '[]',
+    doc_count INTEGER NOT NULL DEFAULT 0,
+    representative_doc_ids_json TEXT NOT NULL DEFAULT '[]',
+    intra_cluster_similarity REAL,
+    is_noise INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY(run_id) REFERENCES topic_runs(run_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cluster_run ON topic_clusters(run_id);
+
+CREATE TABLE IF NOT EXISTS topic_assignments (
+    assignment_id TEXT PRIMARY KEY,
+    cluster_id TEXT NOT NULL,
+    norm_id TEXT NOT NULL,
+    source_id TEXT NOT NULL,
+    distance_to_centroid REAL,
+    membership_score REAL NOT NULL DEFAULT 1.0,
+    FOREIGN KEY(cluster_id) REFERENCES topic_clusters(cluster_id) ON DELETE CASCADE,
+    FOREIGN KEY(norm_id) REFERENCES normalized_texts(norm_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_assign_cluster ON topic_assignments(cluster_id);
+CREATE INDEX IF NOT EXISTS idx_assign_norm ON topic_assignments(norm_id);
+
+CREATE TABLE IF NOT EXISTS cross_source_matches (
+    match_link_id TEXT PRIMARY KEY,
+    editorial_norm_id TEXT NOT NULL,
+    editorial_source_id TEXT NOT NULL,
+    commentary_norm_id TEXT NOT NULL,
+    commentary_source_id TEXT NOT NULL,
+    match_id TEXT,
+    similarity_score REAL NOT NULL,
+    status TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    matching_method TEXT NOT NULL,
+    evidence_json TEXT NOT NULL DEFAULT '{}',
+    created_at_utc TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_xmatch_status ON cross_source_matches(status);
+CREATE INDEX IF NOT EXISTS idx_xmatch_ed ON cross_source_matches(editorial_norm_id);
+CREATE INDEX IF NOT EXISTS idx_xmatch_comm ON cross_source_matches(commentary_norm_id);
+
+CREATE TABLE IF NOT EXISTS timeline_snapshots (
+    snapshot_id TEXT PRIMARY KEY,
+    bucket_label TEXT NOT NULL,
+    doc_count INTEGER NOT NULL DEFAULT 0,
+    mean_sentiment REAL NOT NULL DEFAULT 0.0,
+    sentiment_distribution_json TEXT NOT NULL DEFAULT '{}',
+    top_topics_json TEXT NOT NULL DEFAULT '[]',
+    top_entities_json TEXT NOT NULL DEFAULT '[]',
+    match_events_count INTEGER NOT NULL DEFAULT 0,
+    observed_timestamps_count INTEGER NOT NULL DEFAULT 0,
+    inferred_timestamps_count INTEGER NOT NULL DEFAULT 0,
+    created_at_utc TEXT NOT NULL
 );
 """
 
@@ -1302,3 +1403,270 @@ class SQLiteStorageManager:
                 "negative_sentiment_count": sent_neg,
                 "neutral_sentiment_count": sent_neu,
             }
+
+    # -------------------------------------------------------------------------
+    # Phase 5: Embeddings, Topics & Narrative Intelligence Storage
+    # -------------------------------------------------------------------------
+
+    def upsert_embedding_metadata(self, records: List[EmbeddingMetadataRecord]) -> int:
+        """Upserts embedding metadata records."""
+        if not records:
+            return 0
+        with self._get_connection() as conn:
+            query = """
+            INSERT INTO embedding_records (
+                embedding_id, norm_id, source_type, source_id, model_version,
+                dimension, text_hash, is_test_double, vector_file_path, vector_index, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(embedding_id) DO UPDATE SET
+                text_hash = excluded.text_hash,
+                vector_file_path = excluded.vector_file_path,
+                vector_index = excluded.vector_index,
+                created_at_utc = excluded.created_at_utc;
+            """
+            rows = [
+                (
+                    r.embedding_id,
+                    r.norm_id,
+                    r.source_type,
+                    r.source_id,
+                    r.model_version,
+                    r.dimension,
+                    r.text_hash,
+                    1 if r.is_test_double else 0,
+                    r.vector_file_path,
+                    r.vector_index,
+                    r.created_at.isoformat(),
+                )
+                for r in records
+            ]
+            conn.executemany(query, rows)
+            return len(records)
+
+    def get_embedding_metadata(
+        self,
+        norm_id: Optional[str] = None,
+        model_version: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Queries stored embedding metadata records."""
+        conds = []
+        params: List[Any] = []
+        if norm_id:
+            conds.append("norm_id = ?")
+            params.append(norm_id)
+        if model_version:
+            conds.append("model_version = ?")
+            params.append(model_version)
+
+        where = f"WHERE {' AND '.join(conds)}" if conds else ""
+        query = f"SELECT * FROM embedding_records {where} ORDER BY created_at_utc DESC;"
+        with self._get_connection() as conn:
+            return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+    def save_topic_run(
+        self,
+        run: TopicRunRecord,
+        clusters: List[TopicClusterRecord],
+        assignments: List[TopicAssignmentRecord],
+    ) -> None:
+        """Transactionally persists a topic clustering run with clusters and document assignments."""
+        with self._get_connection() as conn:
+            # Insert topic run
+            conn.execute(
+                """
+                INSERT INTO topic_runs (
+                    run_id, corpus_type, algorithm, n_clusters_requested,
+                    n_clusters_found, n_noise_points, parameters_json,
+                    silhouette_score, davies_bouldin_index, created_at_utc
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """,
+                (
+                    run.run_id,
+                    run.corpus_type.value,
+                    run.algorithm,
+                    run.n_clusters_requested,
+                    run.n_clusters_found,
+                    run.n_noise_points,
+                    run.parameters_json,
+                    run.silhouette_score,
+                    run.davies_bouldin_index,
+                    run.created_at.isoformat(),
+                ),
+            )
+
+            # Insert clusters
+            cluster_rows = [
+                (
+                    c.cluster_id,
+                    c.run_id,
+                    c.cluster_index,
+                    c.topic_label,
+                    json.dumps(c.keywords),
+                    c.doc_count,
+                    json.dumps(c.representative_doc_ids),
+                    c.intra_cluster_similarity,
+                    1 if c.is_noise else 0,
+                )
+                for c in clusters
+            ]
+            conn.executemany(
+                """
+                INSERT INTO topic_clusters (
+                    cluster_id, run_id, cluster_index, topic_label, keywords_json,
+                    doc_count, representative_doc_ids_json, intra_cluster_similarity, is_noise
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+                """,
+                cluster_rows,
+            )
+
+            # Insert assignments
+            assign_rows = [
+                (
+                    a.assignment_id,
+                    a.cluster_id,
+                    a.norm_id,
+                    a.source_id,
+                    a.distance_to_centroid,
+                    a.membership_score,
+                )
+                for a in assignments
+            ]
+            conn.executemany(
+                """
+                INSERT INTO topic_assignments (
+                    assignment_id, cluster_id, norm_id, source_id,
+                    distance_to_centroid, membership_score
+                ) VALUES (?, ?, ?, ?, ?, ?);
+                """,
+                assign_rows,
+            )
+
+    def get_topic_runs(self) -> List[Dict[str, Any]]:
+        """Queries all topic discovery runs."""
+        with self._get_connection() as conn:
+            return [dict(r) for r in conn.execute("SELECT * FROM topic_runs ORDER BY created_at_utc DESC;").fetchall()]
+
+    def get_topic_clusters(self, run_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Queries topic clusters, optionally filtering by run_id."""
+        query = "SELECT * FROM topic_clusters"
+        params: List[Any] = []
+        if run_id:
+            query += " WHERE run_id = ?"
+            params.append(run_id)
+        query += " ORDER BY cluster_index ASC;"
+        with self._get_connection() as conn:
+            return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+    def save_cross_source_matches(self, matches: List[CrossSourceMatchRecord]) -> int:
+        """Upserts cross-source narrative-to-commentary similarity matches."""
+        if not matches:
+            return 0
+        with self._get_connection() as conn:
+            query = """
+            INSERT INTO cross_source_matches (
+                match_link_id, editorial_norm_id, editorial_source_id,
+                commentary_norm_id, commentary_source_id, match_id,
+                similarity_score, status, confidence, matching_method,
+                evidence_json, created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(match_link_id) DO UPDATE SET
+                similarity_score = excluded.similarity_score,
+                status = excluded.status,
+                confidence = excluded.confidence,
+                evidence_json = excluded.evidence_json,
+                created_at_utc = excluded.created_at_utc;
+            """
+            rows = [
+                (
+                    m.match_link_id,
+                    m.editorial_norm_id,
+                    m.editorial_source_id,
+                    m.commentary_norm_id,
+                    m.commentary_source_id,
+                    m.match_id,
+                    m.similarity_score,
+                    m.status.value,
+                    m.confidence,
+                    m.matching_method,
+                    json.dumps(m.evidence),
+                    m.created_at.isoformat(),
+                )
+                for m in matches
+            ]
+            conn.executemany(query, rows)
+            return len(matches)
+
+    def get_cross_source_matches(self, status: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Queries stored cross-source semantic matches."""
+        query = "SELECT * FROM cross_source_matches"
+        params: List[Any] = []
+        if status:
+            query += " WHERE status = ?"
+            params.append(status)
+        query += " ORDER BY confidence DESC;"
+        with self._get_connection() as conn:
+            return [dict(r) for r in conn.execute(query, params).fetchall()]
+
+    def save_timeline_snapshots(self, snapshots: List[NarrativeTimelinePoint]) -> int:
+        """Stores narrative timeline aggregation snapshots."""
+        if not snapshots:
+            return 0
+        with self._get_connection() as conn:
+            query = """
+            INSERT OR REPLACE INTO timeline_snapshots (
+                snapshot_id, bucket_label, doc_count, mean_sentiment,
+                sentiment_distribution_json, top_topics_json, top_entities_json,
+                match_events_count, observed_timestamps_count, inferred_timestamps_count,
+                created_at_utc
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """
+            now_iso = datetime.now(timezone.utc).isoformat()
+            rows = [
+                (
+                    f"snap_{uuid.uuid4().hex[:12]}",
+                    s.bucket_label,
+                    s.doc_count,
+                    s.mean_sentiment,
+                    json.dumps(s.sentiment_distribution),
+                    json.dumps(s.top_topics),
+                    json.dumps(s.top_entities),
+                    s.match_events_count,
+                    s.observed_timestamps_count,
+                    s.inferred_timestamps_count,
+                    now_iso,
+                )
+                for s in snapshots
+            ]
+            conn.executemany(query, rows)
+            return len(snapshots)
+
+    def get_timeline_snapshots(self) -> List[Dict[str, Any]]:
+        """Retrieves stored narrative timeline points."""
+        with self._get_connection() as conn:
+            return [dict(r) for r in conn.execute("SELECT * FROM timeline_snapshots ORDER BY bucket_label ASC;").fetchall()]
+
+    def get_analysis_metrics(self) -> Dict[str, Any]:
+        """Calculates aggregated metrics across Phase 5 analysis tables."""
+        with self._get_connection() as conn:
+            emb_count = conn.execute("SELECT COUNT(*) FROM embedding_records;").fetchone()[0]
+            topic_runs_count = conn.execute("SELECT COUNT(*) FROM topic_runs;").fetchone()[0]
+            clusters_count = conn.execute("SELECT COUNT(*) FROM topic_clusters;").fetchone()[0]
+            assigned_docs = conn.execute("SELECT COUNT(*) FROM topic_assignments;").fetchone()[0]
+            xmatches_total = conn.execute("SELECT COUNT(*) FROM cross_source_matches;").fetchone()[0]
+            xmatches_accepted = conn.execute("SELECT COUNT(*) FROM cross_source_matches WHERE status = 'ACCEPTED';").fetchone()[0]
+            xmatches_review = conn.execute("SELECT COUNT(*) FROM cross_source_matches WHERE status = 'NEEDS_REVIEW';").fetchone()[0]
+            xmatches_unresolved = conn.execute("SELECT COUNT(*) FROM cross_source_matches WHERE status = 'UNRESOLVED';").fetchone()[0]
+            timeline_snaps = conn.execute("SELECT COUNT(*) FROM timeline_snapshots;").fetchone()[0]
+
+            return {
+                "embedding_records_count": emb_count,
+                "topic_runs_count": topic_runs_count,
+                "topic_clusters_count": clusters_count,
+                "topic_assigned_docs_count": assigned_docs,
+                "cross_source_matches_count": xmatches_total,
+                "cross_source_accepted_count": xmatches_accepted,
+                "cross_source_review_count": xmatches_review,
+                "cross_source_unresolved_count": xmatches_unresolved,
+                "timeline_snapshots_count": timeline_snaps,
+            }
+

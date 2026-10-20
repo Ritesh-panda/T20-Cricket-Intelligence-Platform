@@ -139,30 +139,35 @@ flowchart TD
   - Emits `SentimentBaselineRecord` with continuous compound score $[-1.0, +1.0]$, applied rules, and evidence tokens.
   - Fully local, CPU-first, transparent rule/lexicon execution with zero external API dependencies.
 
-### Module H: Clustering & Topic Modeling Pipeline
-- **Modular Model Runner**:
-  - Pipeline 1: `TfidfVectorizer` + `KMeans` (Lexical baseline).
-  - Pipeline 2: `SentenceTransformer` + `KMeans` (Semantic fixed cluster count).
-  - Pipeline 3: `SentenceTransformer` + `UMAP` + `HDBSCAN` (Density-based with noise/outlier detection).
-  - Pipeline 4: `BERTopic` with class-based TF-IDF (`c-TF-IDF`) for dynamic topic representation and topic reduction.
-- **Corpus Segregation**: Commentary and news articles are clustered in isolated pipelines to prevent document-length asymmetry distortions, followed by cross-corpus association.
+### Module H: Clustering & Topic Modeling Pipeline (`src/analysis/`)
+- **Interpretable Sparse Baseline (`CricketTfidfBaseline`)**:
+  - Word unigrams + bigrams and char n-grams with cricket syntax preservation (`19.4`, `182/5`, `82*`, `DRS`).
+- **Dense Clustering Engine (`TopicClusterer`)**:
+  - `KMeans`: Fast baseline with fixed random seeds for deterministic cluster reproducibility.
+  - `DBSCAN`: Density-based clustering tagging isolated or idiosyncratic editorial narratives as noise (`-1`).
+- **Class-Based TF-IDF (`TopicLabeler`)**:
+  - Computes c-TF-IDF keyword distributions across aggregated cluster corpora.
+  - Generates human-readable labels (e.g. `bumrah-yorker-bowling`) and selects centroid-proximate representative documents.
+  - Incoherent or noise clusters explicitly labeled `"Unlabelled Cluster"` or `"Outliers / Noise"`.
+- **Clustering Evaluation (`evaluate_topic_clustering`)**:
+  - Computes silhouette scores, Davies-Bouldin index, cluster-size distributions, noise fractions, and intra/inter-cluster similarities.
 
-### Module I: Match Analytics & Event Alignment Engine
-- **Event Synthesizer**: Groups Cricsheet deliveries into match milestones (powerplay conclusions, death-over sequences, 3-wicket clusters, half-centuries, turning-point overs).
-- **Alignment Algorithmic Heuristic**:
-  ```python
-  AlignmentScore = (
-      0.35 * EntityOverlapScore(article_entities, match_entities) +
-      0.30 * TemporalProximityScore(article_timestamp, match_timestamp) +
-      0.20 * SemanticSimilarity(article_passage_vector, commentary_window_vector) +
-      0.15 * EventKeywordMatch(article_text, delivery_event_keywords)
-  )
-  ```
-- **Explainability Output**: Generates human-readable alignment proofs (e.g., "Linked to Match 38 (IND vs ENG), 16th over because article mentions 'Bumrah yorker', 'dismissal of Livingstone', within 4 hours of match end with 0.88 semantic similarity to commentary").
+### Module I: Match Analytics & Event Alignment Engine (`src/analysis/`)
+- **Event Synthesizer (`EventAlignmentEngine`)**:
+  - Aggregates structured ball-by-ball deliveries into notable milestones (wickets, powerplay finishes, death overs $\le 4$ runs, expensive overs $\ge 15$ runs).
+  - Evaluates heuristic evidence-backed alignments between editorial paragraphs and match milestones.
+- **Two-Stage Cross-Source Matcher (`CrossSourceNarrativeMatcher`)**:
+  - Stage 1: Dense/sparse candidate retrieval above threshold.
+  - Stage 2: Contextual re-ranking with entity overlap bonus and match facts.
+  - Conservative classification: `ACCEPTED` (combined score $\ge 0.50$ + shared entities), `NEEDS_REVIEW` ($0.35 \le s < 0.50$), or `UNRESOLVED` ($< 0.35$).
+- **Narrative Timeline Engine (`NarrativeTimelineEngine`)**:
+  - Aggregates articles and commentary into chronological buckets.
+  - Tracks publication volume, sentiment distributions, topic distributions, and match events.
+  - Strictly distinguishes verified observed timestamps from inferred/date-only timestamps.
 
 ### Module J: Evaluation & Experiment Tracking
-- Logs cluster metrics (Silhouette, Davies-Bouldin, Coherence $C_v$, Outlier ratio).
-- Logs NER and alignment Precision, Recall, and F1 against manual gold-standard evaluation sets.
+- Logs cluster metrics (Silhouette, Davies-Bouldin, cluster distributions, outlier ratio).
+- Logs NER, ER, sentiment, and alignment precision/recall/F1 against deterministic test fixtures.
 
 ### Module K: API & Dashboard Architecture
 - **FastAPI Backend**: Provides asynchronous JSON endpoints with automatic OpenAPI documentation.

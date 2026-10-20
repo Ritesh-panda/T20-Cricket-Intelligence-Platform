@@ -87,3 +87,19 @@ The Phase 4 NLP layer enforces strict data privacy, CPU-first execution, and ope
 4. **Data Minimization & Idempotency**:
    Normalized text and derived entities are persisted transactionally with SHA-256 content hashes. Re-processing identical raw records produces no duplicate database rows and executes zero unnecessary writes.
 
+---
+
+## 7. Semantic Embeddings & Topic Discovery Safeguards (Phase 5 Implementation)
+
+1. **Embedding Model Licensing**:
+   - The primary supported dense model is `sentence-transformers/all-MiniLM-L6-v2`, published under the permissive **Apache 2.0 license**.
+   - Model weights can be cached locally under standard directories (`~/.cache/huggingface/hub/`) and execute completely offline on CPU.
+2. **Explicit Test Double Transparency**:
+   - Unit and integration tests rely on `DeterministicTestEmbeddingModel`, an explicit test double flagged with `is_test_double = True`.
+   - Test double vectors are generated locally via deterministic token hashing, eliminating all automated network downloads during testing.
+3. **Local Vector Storage & Memory Safety**:
+   - High-dimensional dense arrays are written to local numpy binary files (`data/processed/embeddings/`) or columnar Parquet, avoiding memory exhaustion and avoiding large database BLOB bloat.
+4. **Zero Paid Cloud Inference**:
+   - No article content or commentary is transmitted to OpenAI, Anthropic, Google, or any commercial cloud inference API.
+
+

@@ -338,5 +338,77 @@ Proceed to **Phase 4: Text Processing, Cricket NER & Entity Resolution**.
 ### 5. Next Checkpoint & Action
 Proceed to **Phase 5: Semantic Embeddings, Topic Discovery, Alignment & Attention Analytics**.
 
+---
 
+## Session 06: Phase 5 Plan — Semantic Embeddings, Topic Discovery & Narrative Intelligence
+- **Date**: 2026-10-20
+- **Lead Role**: Senior NLP/ML Researcher & Data Architect
+- **Current Phase**: Phase 5 (Semantic Embeddings & Narrative Intelligence)
+- **Status**: COMPLETED
+
+---
+
+### 1. Phase 5 Objectives Achieved
+1. Implemented a modular, reproducible, CPU-first analysis package under `src/analysis/` for semantic embeddings, topic clustering, and narrative alignment.
+2. Built a model-agnostic embedding interface with an explicit, deterministic test double (`DeterministicTestEmbeddingModel`) yielding normalized 384-dimensional vectors, and documented opt-in support for `sentence-transformers/all-MiniLM-L6-v2`.
+3. Implemented an interpretable sparse TF-IDF baseline preserving cricket syntax (`19.4`, `182/5`, `82*`, `DRS`).
+4. Built modular topic clustering (`TopicClusterer`) supporting K-Means and DBSCAN with class-based TF-IDF (`TopicLabeler`) keyword extraction and outlier tagging (`-1` as `"Outliers / Noise"`).
+5. Implemented clustering quality evaluation (`evaluate_topic_clustering`) computing silhouette score, Davies-Bouldin index, cluster size distributions, noise fractions, and intra/inter-cluster similarities.
+6. Built conservative two-stage cross-source retrieval and ranking (`CrossSourceNarrativeMatcher`) between editorial paragraphs, commentary deliveries, and structured match facts.
+7. Constructed structured narrative timelines (`NarrativeTimelineEngine`) distinguishing observed from inferred timestamps.
+8. Upgraded SQLite to Schema Version 4 (`embedding_records`, `topic_runs`, `topic_clusters`, `topic_assignments`, `cross_source_matches`, `timeline_snapshots`) with vector array caching.
+9. Integrated Phase 5 CLI commands (`embed-text`, `cluster-topics`, `evaluate-topics`, `narrative-timeline`, `analysis-stats`, `analysis-validate`).
+10. Added 18 new unit and integration tests in `tests/test_analysis.py`, bringing the total project test suite to 71 passing tests.
+
+---
+
+### 2. Modules Created & Extended
+
+- [`src/analysis/analysis_schemas.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/analysis_schemas.py): Pydantic v2 schemas for embeddings, topic runs, clusters, assignments, cross-source matches, and narrative timeline points.
+- [`src/analysis/embedding_models.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/embedding_models.py): `BaseEmbeddingModel`, `DeterministicTestEmbeddingModel` (test double), and lazy-loaded `SentenceTransformerEmbeddingModel`.
+- [`src/analysis/similarity.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/similarity.py): Cosine similarity, batch similarity matrices, and top-$K$ candidate retrieval.
+- [`src/analysis/tfidf_baseline.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/tfidf_baseline.py): `CricketTfidfBaseline` with cricket-preserving token patterns.
+- [`src/analysis/topic_clustering.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/topic_clustering.py): `TopicClusterer` with K-Means and DBSCAN noise handling.
+- [`src/analysis/topic_labeling.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/topic_labeling.py): `TopicLabeler` with c-TF-IDF keyword extraction and representative document selection.
+- [`src/analysis/topic_evaluation.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/topic_evaluation.py): `evaluate_topic_clustering` computing geometric and distribution metrics.
+- [`src/analysis/narrative_similarity.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/narrative_similarity.py): `CrossSourceNarrativeMatcher` two-stage retrieval and ranking engine.
+- [`src/analysis/event_alignment.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/event_alignment.py): `EventAlignmentEngine` synthesizing milestones (wickets, powerplays, death overs) and computing paragraph alignments.
+- [`src/analysis/narrative_timeline.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/narrative_timeline.py): `NarrativeTimelineEngine` temporal trajectory tracking.
+- [`src/analysis/embedding_pipeline.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/analysis/embedding_pipeline.py): Batch embedding generation with SHA-256 caching and vector persistence.
+- [`src/storage/sqlite_manager.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/storage/sqlite_manager.py): Upgraded to `SCHEMA_VERSION = 4` with DDL and upsert methods.
+- [`src/pipeline/cli.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/pipeline/cli.py): CLI commands `embed-text`, `cluster-topics`, `evaluate-topics`, `narrative-timeline`, `analysis-stats`, `analysis-validate`.
+- [`tests/test_analysis.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_analysis.py): 18 comprehensive tests.
+
+---
+
+### 3. Test Verification & Suite Results
+- **All 71 project tests passed in 9.31s** across all 9 test modules:
+  ```text
+  tests/test_analysis.py: 18 passed
+  tests/test_commentary_adapter.py: 2 passed
+  tests/test_cricsheet_adapter.py: 2 passed
+  tests/test_integration.py: 1 passed
+  tests/test_news_adapter.py: 1 passed
+  tests/test_nlp.py: 18 passed
+  tests/test_pipeline.py: 20 passed
+  tests/test_schemas.py: 5 passed
+  tests/test_storage.py: 4 passed
+  ======================= 71 passed, 3 warnings in 9.31s ========================
+  ```
+
+---
+
+### 4. Documentation Deliverables Created / Updated
+- [`docs/EMBEDDINGS.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/EMBEDDINGS.md): Architecture, model governance, test doubles, and caching protocol.
+- [`docs/TOPIC_DISCOVERY.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/TOPIC_DISCOVERY.md): TF-IDF vs dense embeddings, K-Means, DBSCAN, and c-TF-IDF.
+- [`docs/NARRATIVE_ANALYSIS.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/NARRATIVE_ANALYSIS.md): Two-stage cross-source matching, milestone synthesis, and timeline tracking.
+- [`docs/ANALYSIS_EVALUATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ANALYSIS_EVALUATION.md): Benchmarks, metrics, and storage invariants.
+- [`docs/DATA_MODEL.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/DATA_MODEL.md): Updated with Schema Version 4 tables.
+- [`docs/ARCHITECTURE.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ARCHITECTURE.md): Updated Modules H, I, and J.
+- [`docs/SECURITY_AND_LICENSING.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SECURITY_AND_LICENSING.md): Updated with Section 7 (Semantic Embeddings & Analysis Safeguards).
+
+---
+
+### 5. Next Checkpoint & Action
+Proceed to **Phase 6: Media Attention vs Performance Analytics, Serving API & Dashboard Presentation**.
 

@@ -388,6 +388,313 @@ def resolve_entity_cmd(args: argparse.Namespace) -> int:
     return 0
 
 
+# -------------------------------------------------------------------------
+# Phase 5 CLI Commands
+# -------------------------------------------------------------------------
+
+def embed_text_cmd(args: argparse.Namespace) -> int:
+    """Executes embedding pipeline on normalized texts."""
+    from src.analysis.embedding_models import get_embedding_model
+    from src.analysis.embedding_pipeline import EmbeddingPipeline
+
+    storage = SQLiteStorageManager(args.db_path)
+    model = get_embedding_model(args.model)
+    pipeline = EmbeddingPipeline(storage=storage, embedding_model=model)
+
+    print("\nStarting Semantic Embedding Generation...")
+    print(f"Model: {model.model_name} (Test Double: {model.is_test_double}) | Dry Run: {args.dry_run}\n")
+
+    res = pipeline.process_normalized_texts(
+        source_type=args.source_type,
+        dry_run=args.dry_run,
+        limit=args.limit,
+    )
+
+    print("-" * 60)
+    print("EMBEDDING PIPELINE EXECUTION SUMMARY")
+    print("-" * 60)
+    print(f"Total Eligible Texts:   {res['total_eligible']}")
+    print(f"Embeddings Computed:    {res['embeddings_computed']}")
+    print(f"Skipped (Cache Hits):   {res['skipped_cache_hits']}")
+    print(f"Dry Run Mode:           {res['dry_run']}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def cluster_topics_cmd(args: argparse.Namespace) -> int:
+    """Clusters embedded texts and extracts topic labels."""
+    import uuid
+    import numpy as np
+    from src.analysis.analysis_schemas import CorpusType, TopicAssignmentRecord, TopicClusterRecord, TopicRunRecord
+    from src.analysis.topic_clustering import TopicClusterer
+    from src.analysis.topic_evaluation import evaluate_topic_clustering
+    from src.analysis.topic_labeling import TopicLabeler
+
+    storage = SQLiteStorageManager(args.db_path)
+    corpus_type = CorpusType(args.corpus)
+
+    print(f"\nInitiating Topic Clustering for corpus: '{corpus_type.value}'...")
+
+    with storage._get_connection() as conn:
+        q = "SELECT e.embedding_id, e.norm_id, e.source_id, e.vector_file_path, e.vector_index, n.normalized_text FROM embedding_records e JOIN normalized_texts n ON e.norm_id = n.norm_id"
+        if corpus_type == CorpusType.EDITORIAL:
+            q += " WHERE e.source_type = 'article_paragraph'"
+        elif corpus_type == CorpusType.COMMENTARY:
+            q += " WHERE e.source_type = 'commentary'"
+        rows = conn.execute(q).fetchall()
+
+    if not rows:
+        print(f"[REPORT] No eligible embedded records found in database for corpus: '{corpus_type.value}'.")
+        print("Run 'python -m src.pipeline embed-text' first to populate embeddings.\n")
+        return 0
+
+    # Load vectors from cache files
+    embeddings_list = []
+    valid_rows = []
+    for r in rows:
+        vpath = r["vector_file_path"]
+        vidx = r["vector_index"]
+        if vpath and os.path.exists(vpath):
+            mat = np.load(vpath)
+            if vidx is not None and vidx < len(mat):
+                embeddings_list.append(mat[vidx])
+                valid_rows.append(r)
+
+    if not embeddings_list:
+        print("[WARNING] Embedding records exist in DB but local vector files were not found.")
+        return 1
+
+    matrix = np.array(embeddings_list, dtype=np.float32)
+    doc_ids = [r["norm_id"] for r in valid_rows]
+    doc_texts = [r["normalized_text"] for r in valid_rows]
+
+    clusterer = TopicClusterer(
+        algorithm=args.algorithm,
+        n_clusters=args.k,
+        random_state=42,
+    )
+    labels = clusterer.fit_predict(matrix)
+    distances = clusterer.compute_distances_to_centroid(matrix)
+
+    # Evaluation
+    eval_metrics = evaluate_topic_clustering(matrix, labels, clusterer.cluster_centers_)
+
+    # Labeling
+    labeler = TopicLabeler(top_n_words=5)
+    cluster_keywords = labeler.extract_cluster_keywords(doc_texts, labels)
+
+    run_id = f"topic_run_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+    run_rec = TopicRunRecord(
+        run_id=run_id,
+        corpus_type=corpus_type,
+        algorithm=args.algorithm,
+        n_clusters_requested=args.k if args.algorithm == "kmeans" else None,
+        n_clusters_found=eval_metrics.n_clusters,
+        n_noise_points=eval_metrics.n_noise,
+        parameters_json=json.dumps({"algorithm": args.algorithm, "k": args.k, "random_state": 42}),
+        silhouette_score=eval_metrics.silhouette_score,
+        davies_bouldin_index=eval_metrics.davies_bouldin_index,
+    )
+
+    cluster_recs = []
+    for clus_id in sorted(list(set(labels))):
+        is_noise = (clus_id == -1)
+        kws = cluster_keywords.get(clus_id, [])
+        lbl = labeler.generate_topic_label(kws, clus_id)
+        rep_ids = labeler.select_representative_documents(doc_ids, labels, distances, clus_id, top_m=3)
+
+        c_rec = TopicClusterRecord(
+            cluster_id=f"{run_id}_c{clus_id}",
+            run_id=run_id,
+            cluster_index=clus_id,
+            topic_label=lbl,
+            keywords=kws,
+            doc_count=eval_metrics.cluster_sizes.get(clus_id, 0),
+            representative_doc_ids=rep_ids,
+            is_noise=is_noise,
+        )
+        cluster_recs.append(c_rec)
+
+    # Assignments
+    assignment_recs = []
+    for i, r in enumerate(valid_rows):
+        cid = labels[i]
+        c_id_str = f"{run_id}_c{cid}"
+        assignment_recs.append(
+            TopicAssignmentRecord(
+                assignment_id=f"assign_{run_id[:12]}_{r['norm_id'][:8]}",
+                cluster_id=c_id_str,
+                norm_id=r["norm_id"],
+                source_id=r["source_id"],
+                distance_to_centroid=float(distances[i]),
+                membership_score=1.0,
+            )
+        )
+
+    storage.save_topic_run(run_rec, cluster_recs, assignment_recs)
+
+    print("-" * 60)
+    print(f"TOPIC CLUSTERING RUN: {run_id}")
+    print("-" * 60)
+    print(f"Corpus:          {corpus_type.value}")
+    print(f"Algorithm:       {args.algorithm}")
+    print(f"Clusters Found:  {eval_metrics.n_clusters}")
+    print(f"Noise Documents: {eval_metrics.n_noise} ({eval_metrics.noise_ratio:.1%})")
+    print(f"Silhouette:      {eval_metrics.silhouette_score or 'N/A'}")
+    print(f"Davies-Bouldin:  {eval_metrics.davies_bouldin_index or 'N/A'}")
+    print("-" * 60)
+    print("Discovered Clusters:")
+    for c in cluster_recs:
+        print(f"  Cluster {c.cluster_index:<3} [{c.doc_count:>3} docs] : {c.topic_label}")
+        if c.keywords:
+            print(f"             Keywords: {', '.join(c.keywords)}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def evaluate_topics_cmd(args: argparse.Namespace) -> int:
+    """Displays clustering evaluation metrics."""
+    storage = SQLiteStorageManager(args.db_path)
+    runs = storage.get_topic_runs()
+
+    print("\n" + "=" * 60)
+    print("TOPIC DISCOVERY EVALUATION AUDIT")
+    print("=" * 60)
+
+    if not runs:
+        print("No topic clustering runs stored in database.\n")
+        return 0
+
+    target_run = runs[0] if not args.run_id else next((r for r in runs if r["run_id"] == args.run_id), None)
+    if not target_run:
+        print(f"Run ID '{args.run_id}' not found.")
+        return 1
+
+    print(f"Run ID:          {target_run['run_id']}")
+    print(f"Corpus:          {target_run['corpus_type']}")
+    print(f"Algorithm:       {target_run['algorithm']}")
+    print(f"Clusters Found:  {target_run['n_clusters_found']}")
+    print(f"Noise Count:     {target_run['n_noise_points']}")
+    print(f"Silhouette:      {target_run['silhouette_score'] or 'N/A'}")
+    print(f"Davies-Bouldin:  {target_run['davies_bouldin_index'] or 'N/A'}")
+    print(f"Executed At:     {target_run['created_at_utc']}")
+    print("-" * 60)
+
+    clusters = storage.get_topic_clusters(run_id=target_run["run_id"])
+    print(f"Clusters Detail ({len(clusters)}):")
+    for c in clusters:
+        kws = json.loads(c["keywords_json"] or "[]")
+        print(f"  Index {c['cluster_index']:<2} | Docs: {c['doc_count']:<3} | Label: {c['topic_label']}")
+        if kws:
+            print(f"           Keywords: {', '.join(kws)}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def narrative_timeline_cmd(args: argparse.Namespace) -> int:
+    """Builds and displays narrative evolution timeline points."""
+    from src.analysis.narrative_timeline import NarrativeTimelineEngine
+
+    storage = SQLiteStorageManager(args.db_path)
+    engine = NarrativeTimelineEngine()
+
+    with storage._get_connection() as conn:
+        q = "SELECT article_id, published_at_utc, headline, summary FROM articles"
+        rows = [dict(r) for r in conn.execute(q).fetchall()]
+
+    print("\n" + "=" * 60)
+    print("NARRATIVE EVOLUTION TIMELINE")
+    print("=" * 60)
+
+    if not rows:
+        print("No articles present in database to build timeline.")
+        print("Timeline observations: 0\n")
+        return 0
+
+    articles_data = []
+    for r in rows:
+        articles_data.append({
+            "article_id": r["article_id"],
+            "published_at": r.get("published_at_utc"),
+            "sentiment_label": "NEUTRAL",
+            "sentiment_score": 0.0,
+            "entities": [],
+            "topic_label": None,
+        })
+
+    timeline = engine.build_timeline(articles_data)
+    storage.save_timeline_snapshots(timeline)
+
+    print(f"Timeline Observations: {len(timeline)} time buckets\n")
+    for pt in timeline:
+        print(f"Bucket [{pt.bucket_label}]: {pt.doc_count} documents")
+        print(f"  Observed TS: {pt.observed_timestamps_count} | Inferred TS: {pt.inferred_timestamps_count}")
+        print(f"  Mean Sentiment: {pt.mean_sentiment:.2f}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def analysis_stats_cmd(args: argparse.Namespace) -> int:
+    """Shows aggregated Phase 5 analysis metrics."""
+    storage = SQLiteStorageManager(args.db_path)
+    metrics = storage.get_analysis_metrics()
+
+    print("\n" + "=" * 60)
+    print("PHASE 5 ANALYSIS & NARRATIVE INTELLIGENCE METRICS")
+    print("=" * 60)
+    print(f"Dense Embedding Records:    {metrics['embedding_records_count']}")
+    print(f"Topic Discovery Runs:       {metrics['topic_runs_count']}")
+    print(f"Topic Clusters Discovered:  {metrics['topic_clusters_count']}")
+    print(f"Documents Assigned:         {metrics['topic_assigned_docs_count']}")
+    print("-" * 60)
+    print(f"Cross-Source Match Links:   {metrics['cross_source_matches_count']}")
+    print(f"  - Accepted Matches:       {metrics['cross_source_accepted_count']}")
+    print(f"  - Needs Review:           {metrics['cross_source_review_count']}")
+    print(f"  - Unresolved Links:       {metrics['cross_source_unresolved_count']}")
+    print("-" * 60)
+    print(f"Timeline Snapshots Stored:  {metrics['timeline_snapshots_count']}")
+    print("=" * 60 + "\n")
+    return 0
+
+
+def analysis_validate_cmd(args: argparse.Namespace) -> int:
+    """Validates structural invariants of Phase 5 analysis tables."""
+    storage = SQLiteStorageManager(args.db_path)
+    issues = []
+
+    with storage._get_connection() as conn:
+        # 1. Invalid embedding dimensions
+        bad_dims = conn.execute(
+            "SELECT COUNT(*) FROM embedding_records WHERE dimension <= 0;"
+        ).fetchone()[0]
+        if bad_dims > 0:
+            issues.append(f"Found {bad_dims} embedding records with non-positive dimension")
+
+        # 2. Clusters with negative doc counts
+        bad_counts = conn.execute(
+            "SELECT COUNT(*) FROM topic_clusters WHERE doc_count < 0;"
+        ).fetchone()[0]
+        if bad_counts > 0:
+            issues.append(f"Found {bad_counts} topic clusters with negative doc_count")
+
+        # 3. Cross source matches with invalid similarity scores
+        bad_sims = conn.execute(
+            "SELECT COUNT(*) FROM cross_source_matches WHERE similarity_score < -1.0 OR similarity_score > 1.0;"
+        ).fetchone()[0]
+        if bad_sims > 0:
+            issues.append(f"Found {bad_sims} cross-source matches with similarity_score outside [-1.0, 1.0]")
+
+    if not issues:
+        print("\n[SUCCESS] All Phase 5 analysis structures, vector invariants, and clustering constraints validated perfectly!\n")
+        return 0
+    else:
+        print("\n[WARNING] Invariant issues detected in Phase 5 tables:")
+        for iss in issues:
+            print(f"  - {iss}")
+        print()
+        return 1
+
+
 def main() -> int:
     """CLI Entry point."""
     parser = argparse.ArgumentParser(
@@ -441,6 +748,28 @@ def main() -> int:
     res_parser.add_argument("--mention", required=True, help="Entity mention surface text to resolve")
     res_parser.add_argument("--context", default="", help="Optional context text (e.g. sentence containing team name)")
 
+    # Phase 5 commands
+    emb_parser = subparsers.add_parser("embed-text", help="Generate semantic embeddings for normalized texts")
+    emb_parser.add_argument("--all", action="store_true", help="Embed all eligible normalized texts")
+    emb_parser.add_argument("--dry-run", action="store_true", help="Preview embedding counts without persistence")
+    emb_parser.add_argument("--model", default="test", help="Embedding model name ('test' or 'sentence-transformers/all-MiniLM-L6-v2')")
+    emb_parser.add_argument("--source-type", default=None, help="Filter by source_type ('article_paragraph', 'commentary')")
+    emb_parser.add_argument("--limit", type=int, default=None, help="Limit number of items to embed")
+
+    clus_parser = subparsers.add_parser("cluster-topics", help="Cluster text embeddings to discover recurring topics")
+    clus_parser.add_argument("--corpus", choices=["editorial", "commentary", "combined"], default="editorial", help="Corpus partition to cluster")
+    clus_parser.add_argument("--algorithm", choices=["kmeans", "dbscan"], default="kmeans", help="Clustering algorithm")
+    clus_parser.add_argument("--k", type=int, default=5, help="Number of clusters for KMeans")
+
+    eval_parser = subparsers.add_parser("evaluate-topics", help="Evaluate topic clustering quality metrics")
+    eval_parser.add_argument("--run-id", default=None, help="Topic run ID to evaluate (defaults to latest)")
+
+    time_parser = subparsers.add_parser("narrative-timeline", help="Construct and view narrative evolution timeline")
+    time_parser.add_argument("--match-id", default=None, help="Optional match filter")
+
+    subparsers.add_parser("analysis-stats", help="Show Phase 5 analysis metrics (embeddings, topics, matches)")
+    subparsers.add_parser("analysis-validate", help="Validate invariants across Phase 5 analysis tables")
+
     args = parser.parse_args()
 
     commands = {
@@ -454,6 +783,12 @@ def main() -> int:
         "nlp-stats": nlp_stats_cmd,
         "nlp-validate": nlp_validate_cmd,
         "resolve-entity": resolve_entity_cmd,
+        "embed-text": embed_text_cmd,
+        "cluster-topics": cluster_topics_cmd,
+        "evaluate-topics": evaluate_topics_cmd,
+        "narrative-timeline": narrative_timeline_cmd,
+        "analysis-stats": analysis_stats_cmd,
+        "analysis-validate": analysis_validate_cmd,
     }
 
     cmd_fn = commands.get(args.command)
