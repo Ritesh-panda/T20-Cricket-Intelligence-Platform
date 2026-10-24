@@ -1,74 +1,121 @@
 # T20 Cricket Intelligence Platform
-### Open-Source Research, Narrative Discovery & Event Grounding for the Men's T20 World Cup
+### Open-Source Sports Intelligence, Narrative Discovery & Event Grounding for T20 Cricket
 
-An end-to-end sports intelligence and NLP research system that bridges the gap between **unstructured cricket media (news articles, expert analysis, ball-by-ball written commentary)** and **structured match facts (deliveries, wickets, phases from Cricsheet)**.
+An end-to-end sports intelligence and NLP research system that bridges the gap between **unstructured cricket media (news articles, expert analysis, editorial tournament reports)** and **structured match facts (ball-by-ball deliveries, wickets, and phases from Cricsheet)**.
 
----
-
-## 📖 Project Documentation Suite
-
-The complete architectural, research, and data specifications have been prepared under the [`docs/`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs) directory:
-
-1. [PROJECT_BLUEPRINT.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/PROJECT_BLUEPRINT.md) — Platform vision, core research questions, and architectural principles.
-2. [REQUIREMENTS.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/REQUIREMENTS.md) — Functional (FR-A to FR-L) and non-functional requirements.
-3. [ARCHITECTURE.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ARCHITECTURE.md) — System decomposition, Mermaid data flow diagrams, and local-first execution layout.
-4. [DATA_MODEL.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/DATA_MODEL.md) — Canonical schemas (Matches, Deliveries, Articles, Commentary, Alignments, Entities).
-5. [SOURCE_REGISTER.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SOURCE_REGISTER.md) — Data source inventory (Cricsheet, Cricbuzz, ESPNcricinfo, Wisden) and upstream repository registry.
-6. [REPOSITORY_AUDITS.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/REPOSITORY_AUDITS.md) — 5-pillar repository audit rubric, scoring system, and evaluation template.
-7. [RESEARCH_PLAN.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/RESEARCH_PLAN.md) — Experimental model matrix (TF-IDF, Embeddings, HDBSCAN, BERTopic) and alignment formulation.
-8. [EVALUATION_PLAN.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/EVALUATION_PLAN.md) — Quantitative metrics (Silhouette, Davies-Bouldin, Coherence, Outlier rate, Precision/Recall/MRR) and intrusion tests.
-9. [SECURITY_AND_LICENSING.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SECURITY_AND_LICENSING.md) — Permitted access, robots.txt compliance, copyright/fair use, and secret hygiene.
-10. [IMPLEMENTATION_ROADMAP.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/IMPLEMENTATION_ROADMAP.md) — 9-phase milestone delivery plan with formal completion gates.
-11. [DECISIONS.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/DECISIONS.md) — Architecture Decision Records (ADRs) and unresolved trade-offs.
-12. [SESSION_JOURNAL.md](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SESSION_JOURNAL.md) — Chronological developer journal tracking daily steps, tests, and findings.
+The platform introduces the **Attention-to-Performance Discrepancy Index (APDI)**, quantifying the mathematical divergence between media attention prominence and objective athletic output across role cohorts (Batters, Bowlers, Teams).
 
 ---
 
-## 🏛️ System Overview
+## 📚 Essential Guides & Documentation
+
+- 📖 **[USER_GUIDE.md](docs/USER_GUIDE.md)**: **Complete User Manual** covering setup, React dashboard walkthrough (APDI Explorer, Match Explorer, Player Profiles, Media Intelligence, Topics, Sources), API reference, and APDI interpretation.
+- 🧪 **[TESTING_AND_QA_GUIDE.md](docs/TESTING_AND_QA_GUIDE.md)**: **Complete Tester's Specification & Function Guide** detailing test execution, function-by-function testing reference, invariants, edge cases, and QA acceptance checklists.
+- 📋 **[PHASE_9_RELEASE_CHECKLIST.md](docs/PHASE_9_RELEASE_CHECKLIST.md)**: Item-by-item release verification and research integrity sign-offs.
+- ⚖️ **[PHASE_9_SOURCE_LEGALITY_AUDIT.md](docs/PHASE_9_SOURCE_LEGALITY_AUDIT.md)**: Exhaustive compliance audit of all data sources across 11 legal dimensions.
+- 📐 **[PHASE_9_APDI_METHODOLOGY.md](docs/PHASE_9_APDI_METHODOLOGY.md)**: In-depth mathematical review and numerical sensitivity analysis of the APDI formula.
+
+---
+
+## ⚡ Quickstart: Running Locally
+
+### 1. Prerequisites
+- Python 3.11+ (verified on 3.13)
+- Node.js 18+ and npm
+- SQLite 3 (WAL mode supported)
+
+### 2. Backend Setup & Launch
+```bash
+# Set up virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\Activate.ps1
+
+# Install Python requirements
+pip install -r requirements.txt
+
+# Start FastAPI backend (runs on http://127.0.0.1:8000)
+uvicorn src.api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+*OpenAPI Documentation*: Navigate to `http://127.0.0.1:8000/docs` in your browser.
+
+### 3. Frontend Setup & Launch
+```bash
+cd frontend
+npm install
+
+# Start Vite development server (runs on http://127.0.0.1:5173)
+npm run dev
+```
+*Web Application*: Navigate to `http://127.0.0.1:5173/` in your browser.
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+```bash
+# Run full Python regression test suite (112 tests)
+python -m pytest tests/ -v
+
+# Run frontend test suite (9 tests)
+cd frontend
+npm run test
+
+# Run frontend TypeScript type checking
+npm run typecheck
+
+# Build frontend production bundle
+npm run build
+
+# Run ground-truth scorecard validation script (10/10 matches, 2314 deliveries)
+python scripts/validate_raw_matches_against_db.py
+
+# Run APDI sensitivity analysis script
+python scripts/phase9_apdi_sensitivity.py
+
+# Run NLP gold-set evaluation benchmark (N=20)
+python scripts/evaluate_nlp_gold_set.py
+```
+
+---
+
+## 🏛️ System Architecture
 
 ```
-[01. Source Registry & Adapters]
-  └── Cricsheet Open Data + Permitted Publishers (Robots.txt compliant, rate-limited)
+[01. Data Acquisition & Adapters]
+  └── Cricsheet Open Data (ODC-By 1.0) + Wikimedia Editorial Reports (CC BY-SA 4.0)
         │
 [02. Extraction, Normalization & Validation]
-  └── Trafilatura text extraction + Commentary parsing + Pydantic v2 validation + SHA-256 deduplication
+  └── Trafilatura text extraction + Pydantic v2 validation + SHA-256 deduplication
         │
-[03. Canonical Cricket Data Layer]
-  └── SQLite / PostgreSQL metadata + Parquet columnar datasets (local-first)
+[03. Persistence Layer]
+  └── SQLite (data/cricket_intel.db, Schema Version 5 with WAL mode)
         │
 [04. Cricket NLP & Match Analytics]
   └── Cricket NER & gazetteer entity resolution + Aspect sentiment + Sentence Transformers
         │
-[05. Reasoning, Clustering & Event Alignment]
-  └── Comparative Topic Models (TF-IDF / HDBSCAN / BERTopic) + Hybrid media-to-match event linker
+[05. Reasoning, Clustering & Discrepancy Analytics]
+  └── KMeans topic clusters (k=3) + APDI calculation engine (Normalized Attention - Normalized Performance)
         │
 [06. Serving & Presentation]
-  └── FastAPI backend service + React/TypeScript sports intelligence dashboard
+  └── FastAPI REST backend (:8000) + React/Vite sports intelligence dashboard (:5173)
 ```
 
 ---
 
-## 🔬 Core Research Hypotheses
+## 📊 Key Verified Metrics (ICC Men's T20 World Cup 2024)
 
-- **Unsupervised Topic Discovery**: Uncover recurring T20 themes (death-overs bowling, powerplay collapse, selection debates) without rigid manual taxonomies.
-- **Cross-Vocabulary Equivalence**: Dense sentence embeddings cluster articles reporting the same match event despite publisher stylistic differences.
-- **Media-to-Match Grounding**: Link subjective news assertions to exact delivery sequences (e.g., Over 17.1–17.6) with measured precision and recall.
-- **Narrative vs Performance**: Quantify media hype vs. objective on-field impact using an Attention-to-Performance Ratio ($APR$).
-
----
-
-## 🛡️ Repository Isolation Policy
-
-All candidate third-party open-source repositories will be cloned into the local quarantined directory:
-```
-research_sources/   <-- Excluded from Git via .gitignore
-```
-Candidate repositories are inspected in read-only mode for commit hash, license, dependencies, and code quality before any logic is reused or adapted.
+- **Matches Verified**: 10 matches (100% exact parity with raw Cricsheet JSON).
+- **Deliveries Verified**: 2,314 ball-by-ball records.
+- **Editorial Text**: 5 Wikimedia articles, 314 paragraphs, 683 entity mentions.
+- **Topic Clusters**: 3 distinct clusters (Historical Rivalry, Match Action, Squad Rosters).
+- **Entities Evaluated**: 116 unique entities (107 players + 9 teams).
+- **APDI Evaluation**: 13 Valid entities (7 Balanced, 3 Over-Attended, 3 Under-Attended) and 103 low-sample entities strictly preserved with `NULL` scores (`INSUFFICIENT_DATA`).
+- **Test Suite**: 112 passing Python tests, 9 passing frontend tests, 0 TypeScript errors.
 
 ---
 
-## 🚀 Current Status & Next Checkpoint
+## 📜 License & Compliance Notice
 
-- **Phase 0 (Initialization & Blueprint)**: **COMPLETE** ✅
-- **Phase 1 (Repository Audits)**: **AWAITING URL LIST** ⏳
-- **Next Action**: User to provide curated list of open-source repository URLs to begin Phase 1 audits and classification.
+- **Structured Cricket Data**: Provided by [Cricsheet](https://cricsheet.org/) under the [Open Data Commons Attribution License (ODC-By 1.0)](https://opendatacommons.org/licenses/by/1-0/).
+- **Editorial Summaries**: Sourced from [Wikipedia / Wikimedia Foundation](https://en.wikipedia.org/) under [Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
+- **Ethical Web Scraping Protocol**: The platform adheres strictly to `robots.txt` directives. Commercial publishers with restrictive terms (ESPNcricinfo, Cricbuzz, Wisden) are categorized as `RESTRICTED` and withheld from automated scraping.
