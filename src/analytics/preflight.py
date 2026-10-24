@@ -118,12 +118,12 @@ class AnalyticsPreflight:
             if matches_count > 0 and deliveries_count > 0:
                 unreconciled = conn.execute(
                     """
-                    SELECT m.match_id, SUM(d.total_runs) as total_runs
+                    SELECT m.match_id, SUM(d.total_runs) as total_match_runs
                     FROM matches m
                     JOIN deliveries d ON m.match_id = d.match_id
                     WHERE m.tournament = ?
                     GROUP BY m.match_id
-                    HAVING total_runs = 0;
+                    HAVING SUM(d.total_runs) = 0;
                     """,
                     (tournament,),
                 ).fetchall()

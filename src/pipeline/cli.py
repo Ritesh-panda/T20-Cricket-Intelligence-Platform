@@ -6,7 +6,9 @@ inspecting failures, reporting metrics, data validation, and live smoke testing.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,7 +22,9 @@ from src.storage.sqlite_manager import SQLiteStorageManager
 from src.analytics.schemas import (
     AnalyticsRunRecord,
     CohortRole,
+    CricketPerformanceMetrics,
     DiscrepancyCategory,
+    MediaAttentionMetrics,
     PreflightCheckResult,
     SufficiencyStatus,
 )
@@ -534,7 +538,7 @@ def cluster_topics_cmd(args: argparse.Namespace) -> int:
         c_id_str = f"{run_id}_c{cid}"
         assignment_recs.append(
             TopicAssignmentRecord(
-                assignment_id=f"assign_{run_id[:12]}_{r['norm_id'][:8]}",
+                assignment_id=f"assign_{run_id[:12]}_{i}_{r['norm_id']}",
                 cluster_id=c_id_str,
                 norm_id=r["norm_id"],
                 source_id=r["source_id"],

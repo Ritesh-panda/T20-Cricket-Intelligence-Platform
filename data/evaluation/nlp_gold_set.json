@@ -1,0 +1,202 @@
+[
+  {
+    "id": "gold_01",
+    "surface": "Virat Kohli",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 11,
+    "expected_id": "player_virat_kohli",
+    "expected_status": "RESOLVED",
+    "context": "Virat Kohli scored 76 runs in the 2024 T20 World Cup final for India."
+  },
+  {
+    "id": "gold_02",
+    "surface": "Kohli",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 5,
+    "expected_id": "player_virat_kohli",
+    "expected_status": "RESOLVED",
+    "context": "Kohli anchored the Indian innings after early wickets fell."
+  },
+  {
+    "id": "gold_03",
+    "surface": "Rohit Sharma",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 12,
+    "expected_id": "player_rohit_sharma",
+    "expected_status": "RESOLVED",
+    "context": "Captain Rohit Sharma led India throughout the tournament."
+  },
+  {
+    "id": "gold_04",
+    "surface": "Sharma",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 6,
+    "expected_id": "player_rohit_sharma",
+    "expected_status": "AMBIGUOUS",
+    "context": "Sharma was mentioned in the team lineup without initial."
+  },
+  {
+    "id": "gold_05",
+    "surface": "Jasprit Bumrah",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 14,
+    "expected_id": "player_jasprit_bumrah",
+    "expected_status": "RESOLVED",
+    "context": "Jasprit Bumrah was named Player of the Tournament for India."
+  },
+  {
+    "id": "gold_06",
+    "surface": "Bumrah",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 6,
+    "expected_id": "player_jasprit_bumrah",
+    "expected_status": "RESOLVED",
+    "context": "Bumrah delivered a crucial 18th over conceding only two runs."
+  },
+  {
+    "id": "gold_07",
+    "surface": "Heinrich Klaasen",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 16,
+    "expected_id": "player_heinrich_klaasen",
+    "expected_status": "RESOLVED",
+    "context": "Heinrich Klaasen struck 52 off 27 balls for South Africa."
+  },
+  {
+    "id": "gold_08",
+    "surface": "Klaasen",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 7,
+    "expected_id": "player_heinrich_klaasen",
+    "expected_status": "RESOLVED",
+    "context": "Klaasen hit three sixes off Axar Patel in the 15th over."
+  },
+  {
+    "id": "gold_09",
+    "surface": "Hardik Pandya",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 13,
+    "expected_id": "player_hardik_pandya",
+    "expected_status": "RESOLVED",
+    "context": "Hardik Pandya defended 16 runs in the final over."
+  },
+  {
+    "id": "gold_10",
+    "surface": "Arshdeep Singh",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 14,
+    "expected_id": "player_arshdeep_singh",
+    "expected_status": "RESOLVED",
+    "context": "Arshdeep Singh took key wickets in the powerplay."
+  },
+  {
+    "id": "gold_11",
+    "surface": "India",
+    "type": "TEAM",
+    "start": 0,
+    "end": 5,
+    "expected_id": "IND",
+    "expected_status": "RESOLVED",
+    "context": "India defeated South Africa to win their second T20 World Cup title."
+  },
+  {
+    "id": "gold_12",
+    "surface": "South Africa",
+    "type": "TEAM",
+    "start": 0,
+    "end": 12,
+    "expected_id": "SOU",
+    "expected_status": "RESOLVED",
+    "context": "South Africa reached their first ever senior men's World Cup final."
+  },
+  {
+    "id": "gold_13",
+    "surface": "Pakistan",
+    "type": "TEAM",
+    "start": 0,
+    "end": 8,
+    "expected_id": "PAK",
+    "expected_status": "RESOLVED",
+    "context": "Pakistan suffered an upset defeat against the United States in Dallas."
+  },
+  {
+    "id": "gold_14",
+    "surface": "United States",
+    "type": "TEAM",
+    "start": 0,
+    "end": 13,
+    "expected_id": "UNI",
+    "expected_status": "RESOLVED",
+    "context": "United States qualified for the Super 8 stage in their debut tournament."
+  },
+  {
+    "id": "gold_15",
+    "surface": "England",
+    "type": "TEAM",
+    "start": 0,
+    "end": 7,
+    "expected_id": "ENG",
+    "expected_status": "RESOLVED",
+    "context": "England was eliminated by India in the semi-final in Guyana."
+  },
+  {
+    "id": "gold_16",
+    "surface": "Australia",
+    "type": "TEAM",
+    "start": 0,
+    "end": 9,
+    "expected_id": "AUS",
+    "expected_status": "RESOLVED",
+    "context": "Australia failed to advance to the semi-finals after losing to India and Afghanistan."
+  },
+  {
+    "id": "gold_17",
+    "surface": "Khan",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 4,
+    "expected_id": null,
+    "expected_status": "AMBIGUOUS",
+    "context": "Khan bowled tightly in the middle overs."
+  },
+  {
+    "id": "gold_18",
+    "surface": "T20 World Cup",
+    "type": "TOURNAMENT",
+    "start": 0,
+    "end": 13,
+    "expected_id": "t20_world_cup",
+    "expected_status": "RESOLVED",
+    "context": "The 2024 ICC Men's T20 World Cup was co-hosted by the West Indies and the USA."
+  },
+  {
+    "id": "gold_19",
+    "surface": "Kensington Oval",
+    "type": "VENUE",
+    "start": 0,
+    "end": 15,
+    "expected_id": "venue_kensington_oval",
+    "expected_status": "RESOLVED",
+    "context": "The final was played at Kensington Oval in Bridgetown, Barbados."
+  },
+  {
+    "id": "gold_20",
+    "surface": "Haris Rauf",
+    "type": "PLAYER",
+    "start": 0,
+    "end": 10,
+    "expected_id": "player_haris_rauf",
+    "expected_status": "RESOLVED",
+    "context": "Haris Rauf bowled the final over in the tie against USA."
+  }
+]

@@ -41,6 +41,8 @@ data/cache/
 *.jsonl
 *.sqlite3
 *.db
+*.db-*
+*.db.bak*
 
 # Model Checkpoints & Vectors
 models/checkpoints/

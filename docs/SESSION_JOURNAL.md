@@ -560,11 +560,97 @@ Phase 6B is verified and complete. Proceed to **Phase 6C: Frontend & Intelligenc
 4. **Python Regression Suite (`pytest tests/`)**:
    - Ran `python -m pytest tests/` from repository root: **96 passed, 0 failed in 68.99s**.
 
-### 4. Git & Repository Status
-- Added frontend files to repository.
-- Updated `.gitignore` to explicitly ignore `frontend/node_modules/`, `frontend/dist/`, `.vite/`.
-- Updated `docs/ARCHITECTURE.md` with Module L Frontend Research Dashboard.
-- Created `frontend/README.md`.
+### 5. Next Checkpoint & Action
+Phase 6C is verified, committed (`ac6f44a`), and pushed to GitHub. Proceed to **Phase 7: Real-World Data Ingestion, End-to-End Validation, and Research Quality**.
+
+---
+
+## Session 10 — 2026-10-24 (Phase 7: Real-World Ingestion, End-to-End Validation & Quality)
+
+### 1. Mandatory Preflight Inspection
+- **Git Repository State**: Clean working tree on branch `main`, commit `ac6f44a`. Remote `origin` linked to `https://github.com/Ritesh-panda/T20-Cricket-Intelligence-Platform.git`.
+- **Database Architecture Audit**:
+  - `data/cricket_intel.db`: Primary production database. Schema version 5 (28 tables), 0 records. Used consistently by both `src/api/config.py` (`APISettings.db_path`) and `src/pipeline/cli.py` (`--db-path`).
+  - `data/cricket_platform.db`: Secondary database from Phase 5 milestone (schema version 4, 24 tables, 0 records).
+  - Target for all Phase 7 ingestion: strictly `data/cricket_intel.db`.
+- **CLI Subsystem Audit**:
+  - `python -m src.pipeline` operational with 22 operational subcommands spanning discovery, ingestion, NLP, clustering, event alignment, attention, performance, APDI, and structural validation.
+- **Source Verification & Access Policies**:
+  - **Tier A (Structured Data)**: Cricsheet verified via `https://cricsheet.org/downloads/`. Terms: Open Data Commons Attribution License (ODC-By 1.0) / CC-BY. Direct ZIP downloads operational (`t20s_male_json.zip`, `recently_played_7_male_json.zip`, `ipl_json.zip`).
+  - **Tier B (Editorial News & Reviews)**:
+    - ESPNcricinfo: `robots.txt` explicitly disallows bot crawling on `/rss/` (`CAN_FETCH = False`). Full-text ingestion withheld to honor source access controls.
+    - Wisden: Cloudflare HTTP 520 / challenge blocks automated fetches. Withheld to prevent bypass evasion.
+    - BBC Sport & Guardian Cricket RSS: Public syndication feeds permitted by `robots.txt` (`CAN_FETCH = True`), HTTP 200 returned.
+    - Wikinews & Wikipedia REST APIs: Explicit Creative Commons Attribution (CC-BY 2.5 / CC-BY-SA 4.0) licensing for match summaries, reviews, and tournament reports.
+  - **Tier C (Ball-by-Ball Commentary)**:
+    - Commercial third-party live commentary endpoints require authentication or disallow automated extraction. Documented as a specific research limitation; factual commentary notes and milestone extracts from authorized feeds will be utilized without fabricating complete coverage.
+- **Regression Baseline**:
+  - Python tests: **96 passed** in 68.99s.
+  - Frontend Vitest tests: **9 passed** in 17.79s.
+  - TypeScript build: Clean production compilation (0 errors).
+
+### 2. Real-World Corpus Acquisition & Ingestion
+- **Curated Dataset Scope**:
+  - **Tier A (Structured Matches)**: 10 completed matches (2,314 deliveries, 107 players, 9 teams) from the ICC Men's T20 World Cup 2024 via Cricsheet (ODC-By 1.0) under `data/raw/cricsheet/`.
+  - **Tier B (Editorial Articles)**: 5 distinct tournament reports and match reviews (314 paragraphs, 13,650 words) from Wikimedia under CC-BY-SA 4.0 under `data/raw/editorial/`.
+  - **Tier C (Commentary)**: Documented restriction on commercial commentary scraping; zero fake commentary fabricated.
+- **Ingestion Script (`scripts/ingest_phase7_corpus.py`)**:
+  - Ingested 10 matches, 2,314 deliveries, 9 teams, 107 players, 5 articles, and 314 paragraphs in 12.80s with 0 errors.
+  - Automated entity linking resolved `2024_Men's_T20_World_Cup_final.html` -> `cric_20240629_ind_sou` (Confidence 1.00) and `India-Pakistan_cricket_rivalry.html` -> `cric_20240609_ind_pak` (Confidence 0.90), while multi-match tournament articles were left unresolved due to ambiguity margin.
+
+### 3. Ingestion Idempotency & Invariant Validation
+- Executed second ingestion run immediately on the same database:
+  - 0 duplicate matches, 0 duplicate deliveries, 0 duplicate articles.
+  - `python -m src.pipeline validate`: 0 orphaned deliveries, 0 delivery total errors, 0 empty articles. Passed with `[SUCCESS]`.
+
+### 4. Cricket NLP & Gold-Set Evaluation
+- Executed `python -m src.pipeline process-text --all`:
+  - 314 normalized texts, 683 entity mentions extracted, 607 resolved (88.9% resolution rate), 60 ambiguous, 588 sentiment records created.
+- Created `data/evaluation/nlp_gold_set.json` (20 manually annotated entities) and benchmark script `scripts/evaluate_nlp_gold_set.py`:
+  - Resolution accuracy: 80.0%, Ambiguity detection: 5.0%, Coverage: 85.0%, Wrongly resolved: 0.
+
+### 5. Semantic Embeddings & Topic Clustering
+- Local dense embedding model `sentence-transformers/all-MiniLM-L6-v2` loaded on CPU:
+  - Computed 314 dense embeddings (384-dimensional, L2-normalized).
+- Discovered 3 topic clusters (K-Means, $k=3$):
+  - Cluster 0 (120 docs): `india-pakistan-cup`
+  - Cluster 1 (94 docs): `toss_elected-elected-won_toss`
+  - Cluster 2 (100 docs): `2024-retrieved-squad`
+  - Silhouette score: 0.214, Davies-Bouldin: 2.722, Noise: 0.0%.
+
+### 6. Attention, Performance & APDI Analytics
+- `analytics-preflight`: Overall Eligibility: ELIGIBLE, Quality Status: VALID (0 warnings, 0 errors).
+- `compute-attention`: 23 entities analyzed with raw composites, reach, and prominence.
+- `compute-performance`: 162 records (batters, bowlers, teams) with objective strike rates, economies, wickets, and composites.
+- `compute-apdi`: 162 APDI records computed:
+  - Pakistan: Attn 0.8333, Perf 0.3333 -> APDI +0.5000 (`OVER_ATTENDED`)
+  - India: Attn 1.0000, Perf 1.0000 -> APDI 0.0000 (`BALANCED`)
+  - United States: Attn 0.0000, Perf 0.5000 -> APDI -0.5000 (`UNDER_ATTENDED`)
+  - 103 low-sample player entities preserved as `INSUFFICIENT_DATA` with `apdi_value = NULL`.
+- Built independent audit script `scripts/audit_apdi_calculation.py`: all scorecards, individual batter/bowler composites, and $\text{APDI} = \text{NormAttention} - \text{NormPerformance}$ formulas verified with exact matches.
+
+### 7. End-to-End API & Dashboard Live Verification
+- Started FastAPI (`http://127.0.0.1:8000`) and verified OpenAPI endpoints: `/health`, `/api/v1/matches`, `/api/v1/players`, `/api/v1/articles`, `/api/v1/analytics/overview`, `/api/v1/analytics/apdi`, `/api/v1/topics`, `/api/v1/entities`.
+- Started React frontend (`http://127.0.0.1:5173`) and audited via `browser_subagent`: Overview, Matches, APDI Explorer, and Topics/Narratives verified live displaying genuine API data with zero fake fallbacks.
+
+### 8. Regression Verification
+- Python test suite: **100 passed, 0 failed in 22.08s** (`pytest tests/`).
+- Frontend test suite: **9 passed in 50.04s** (`npm run test`).
+- Frontend typecheck: **0 errors** (`npm run typecheck`).
+
+### 9. Deliverables Produced
+- [`docs/SOURCE_REGISTER.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/SOURCE_REGISTER.md): Updated with Phase 7 provenance ledger and licensing terms.
+- [`docs/PHASE_7_DATA_VALIDATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/PHASE_7_DATA_VALIDATION.md): Comprehensive validation report.
+- [`docs/PHASE_7_RUNBOOK.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/PHASE_7_RUNBOOK.md): Operations runbook for reproduction.
+- [`scripts/ingest_phase7_corpus.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/scripts/ingest_phase7_corpus.py): Reproducible ingestion script.
+- [`scripts/evaluate_nlp_gold_set.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/scripts/evaluate_nlp_gold_set.py): Gold-set evaluation script.
+- [`scripts/audit_apdi_calculation.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/scripts/audit_apdi_calculation.py): Independent calculation audit script.
+- [`tests/test_phase7_validation.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_phase7_validation.py): 4 targeted integration tests.
+
+### 10. Checkpoint
+Phase 7 is fully validated. Per mission instructions, stop here and do not begin Phase 8.
+
+
 
 
 
