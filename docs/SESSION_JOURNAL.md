@@ -506,4 +506,65 @@ Proceed to **Phase 6B: FastAPI Serving Layer & Analytics Endpoints**.
 ### 5. Next Checkpoint & Action
 Phase 6B is verified and complete. Proceed to **Phase 6C: Frontend & Intelligence Dashboard** when ready.
 
+---
+
+## Session 09 — 2026-10-24 (Phase 6C: T20 Cricket Intelligence Dashboard)
+
+### 1. Objectives & Scope
+- Build Phase 6C: a polished, responsive React dashboard for exploring cricket matches, player performance, media coverage, editorial narratives, topic clusters, cross-source event alignments, source provenance, and the Attention-to-Performance Discrepancy Index (APDI).
+- Strictly adhere to data truthfulness: no synthetic scores, fabricated players, or artificial results.
+- Honor existing Phase 6A methodology: preserve `INSUFFICIENT_DATA` and display `null` scores as `unavailable`, never coerced to zero.
+- Connect to actual FastAPI backend running at `http://127.0.0.1:8000`.
+- Frontend implementation only (located in `frontend/`). No modifications to historical analytics math or backend endpoints.
+
+### 2. Implementation & Components Created
+
+1. **Frontend Infrastructure & Tooling (`frontend/`)**:
+   - `package.json`: Configured with React 18, TypeScript 5 (Strict Mode), Vite 6, Tailwind CSS 3, Lucide React, Recharts, React Router DOM 6, TanStack React Query 5, Axios, Vitest, Testing Library.
+   - `tsconfig.json` & `vite.config.ts`: Strict TypeScript compiler options with `@/*` aliases and dev server proxy routing `/api`, `/health`, `/ready` to `127.0.0.1:8000`.
+   - `tailwind.config.js` & `src/index.css`: Cricket pitch emerald (`#10b981`), crimson wicket (`#e11d48`), boundary gold (`#f59e0b`), dark navy foundation (`#020617` / `#0b1329`), and customized typography.
+
+2. **Types & Centralized API Client (`frontend/src/`)**:
+   - `src/types/api.ts`: Comprehensive TypeScript interfaces strictly mirroring all 32 endpoints, canonical Pydantic models, and pagination envelopes from the FastAPI backend.
+   - `src/lib/api.ts`: Centralized, typed Axios client with safe error extractor (`extractErrorMessage`), request timeouts (15s), and query functions for all 7 functional areas.
+   - `src/context/ThemeContext.tsx`: Theme provider with dark/light mode toggle and persistent state.
+
+3. **Reusable Design System (`frontend/src/components/`)**:
+   - `ui/`: `Card`, `Badge` (with APDI category variants `over_attended`, `under_attended`, `balanced`, `insufficient_data`), `Button`, `MetricCard`, `EmptyState` (with CLI remediation commands), `ErrorState` (with retry button), `Skeleton`, `Table`.
+   - `layout/`: `Sidebar` (responsive collapsible sidebar with all 8 navigation items), `Header` (live backend probe, tournament scope selector, theme toggle), `AppLayout`.
+
+4. **Required Feature Modules (`frontend/src/features/`)**:
+   - `overview/OverviewPage.tsx`: Primary research dashboard with quality gate status, corpus data coverage metrics, APDI distribution snapshot, and unpopulated corpus notice.
+   - `matches/MatchesPage.tsx`: Paginated tournament match directory with tournament/season filters, delivery-derived scorecard drawer, batting strike rates, and bowling economies.
+   - `players/PlayersPage.tsx`: Player directory with search by name/alias, role badges, objective metrics (batting average, bowling SR), and associated media prominence.
+   - `media/MediaPage.tsx`: Dual-tab explorer for news journalism articles and ball-by-ball commentary, source domain filtering, paragraph segment inspector, and publisher framing distributions.
+   - `narratives/NarrativesPage.tsx`: Topic clusters with c-TF-IDF keywords, entity mentions with resolution tags (`RESOLVED`, `AMBIGUOUS`, `UNRESOLVED`), narrative timeline, and cross-source match alignments.
+   - `apdi/APDIPage.tsx`: Core APDI explorer featuring mathematical formulation reference, cohort percentile distribution, discrepancy badges, evidence lineage audit, and strict preservation of `null` scores.
+   - `sources/SourcesPage.tsx`: Provenance records, crawler pipeline stats, ingestion runs, and analytics batch history.
+   - `health/HealthPage.tsx`: Independent four-tier diagnostic probes (Process Liveness, SQLite Persistence, Data Availability, and Analytics Quality Gate) with structural validation audit.
+
+### 3. Test Verification & Quality Gates
+
+1. **Frontend Vitest Suite (`npm run test`)**:
+   - `src/test/api.test.ts` (4 tests): Client configuration, endpoint formatting, error extraction.
+   - `src/test/app.test.tsx` (1 test): Application shell, routing, navigation.
+   - `src/test/features.test.tsx` (4 tests): APDI `INSUFFICIENT_DATA` null preservation, Matches empty states, Health 4-tier diagnostic verification, Overview unpopulated notice.
+   - **Result**: **3 test files, 9 tests passed in 17.79s**.
+
+2. **TypeScript Compilation (`npm run typecheck`)**:
+   - `tsc --noEmit` executed with 0 errors.
+
+3. **Vite Production Build (`npm run build`)**:
+   - `vite build` completed cleanly in 51.70s with production bundle emitted to `frontend/dist/`.
+
+4. **Python Regression Suite (`pytest tests/`)**:
+   - Ran `python -m pytest tests/` from repository root: **96 passed, 0 failed in 68.99s**.
+
+### 4. Git & Repository Status
+- Added frontend files to repository.
+- Updated `.gitignore` to explicitly ignore `frontend/node_modules/`, `frontend/dist/`, `.vite/`.
+- Updated `docs/ARCHITECTURE.md` with Module L Frontend Research Dashboard.
+- Created `frontend/README.md`.
+
+
 

@@ -52,10 +52,14 @@ models/cache/
 # Jupyter Notebooks Checkpoints
 .ipynb_checkpoints
 
-# Node / Frontend (when dashboard is added)
+# Node / Frontend (Phase 6C Dashboard)
 node_modules/
+frontend/node_modules/
 .npm
 dist/
+frontend/dist/
+.vite/
+frontend/.vite/
 .next/
 
 # IDE & OS

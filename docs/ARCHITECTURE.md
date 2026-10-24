@@ -200,8 +200,19 @@ flowchart TD
     - Observability: `/api/v1/observability/ingestion-runs`, `/api/v1/observability/sources`, `/api/v1/observability/pipeline-stats`, `/api/v1/observability/analytics-runs`
   - Truthful Empty-State Invariants: Returns HTTP 200 with `items: []` and preserves `INSUFFICIENT_DATA` with `null` numerical score when analytical evidence is incomplete.
   - Safe Parameterization: All SQL statements use parameterized bindings (`?`). Centralized exception handlers prevent database stack traces or credentials from leaking.
-- **Frontend Dashboard (Phase 6C - Deferred)**:
-  - Consumes `/api/v1` endpoints for sports intelligence visualizations.
+- **Frontend Research Dashboard (`frontend/`)**:
+  - Implemented in Phase 6C as a polished, research-oriented React 18 single-page application built with TypeScript 5, Vite 6, Tailwind CSS 3, and TanStack React Query 5.
+  - Consumes all 32 read-only endpoints across all research subsystems:
+    - Overview: Primary research dashboard with preflight status, corpus data coverage, and APDI distribution breakdown.
+    - Matches Explorer: Paginated tournament match directory with delivery-derived scorecards and bowler/batter statistics.
+    - Player Explorer: Entity directory with role filtering, aliasing details, objective performance, and associated media attention.
+    - Media Intelligence: Dual-tab view for news journalism articles and ball-by-ball commentary, paragraph segment inspector, and publisher framing distributions.
+    - Topics & Narratives: Cluster keyword distributions, representative passages, entity mentions with resolution indicators, and cross-source match alignment evidence.
+    - APDI Explorer: Core research workbench featuring mathematical formulation reference, cohort percentile distribution, discrepancy badges (`OVER_ATTENDED`, `UNDER_ATTENDED`, `BALANCED`, `INSUFFICIENT_DATA`), evidence lineage inspection, and strict preservation of `null` scores.
+    - Data Sources: Provenance audit log, crawler pipeline statistics, and ingestion run history.
+    - System Health: Independent four-tier diagnostic probes (Process Liveness, SQLite Persistence, Data Availability, and Analytics Quality Gate) with structural validation audit.
+  - Strict Data Integrity: No synthetic scores, fabricated players, or artificial results. Empty states explain lack of ingested data truthfully with clear CLI ingestion guidance.
+  - Dark/Light Theme: Complete theme support with localStorage persistence and cricket pitch palette.
 
 ---
 
