@@ -35,6 +35,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, title }) => {
     retry: 1,
   });
 
+  const { data: status } = useQuery({
+    queryKey: ['systemStatus'],
+    queryFn: () => api.getStatus(),
+    staleTime: 60000,
+  });
+
   const isConnected = !isHealthError && !isReadinessError && health?.status === 'healthy';
   const isDbReady = readiness?.database_accessible === true;
 
@@ -60,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, title }) => {
         {/* Active Tournament Indicator */}
         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-cricket-navy-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-cricket-navy-700">
           <Calendar className="w-3.5 h-3.5 text-emerald-500" />
-          <span>T20 World Cup 2024</span>
+          <span>{status?.tournament || "ICC Men's T20 World Cup"}</span>
         </div>
 
         {/* API Connectivity Status Indicator */}

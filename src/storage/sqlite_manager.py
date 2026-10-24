@@ -2160,14 +2160,38 @@ class SQLiteStorageManager:
     def get_analytics_summary(self, tournament: Optional[str] = None) -> Dict[str, Any]:
         """Provides summary metrics across Phase 6A analytics tables."""
         with self._get_connection() as conn:
-            if tournament:
-                att_count = conn.execute("SELECT COUNT(*) FROM attention_metrics WHERE tournament = ?;", (tournament,)).fetchone()[0]
-                perf_count = conn.execute("SELECT COUNT(*) FROM performance_metrics WHERE tournament = ?;", (tournament,)).fetchone()[0]
-                apdi_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ?;", (tournament,)).fetchone()[0]
-                over_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'OVER_ATTENDED';", (tournament,)).fetchone()[0]
-                under_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'UNDER_ATTENDED';", (tournament,)).fetchone()[0]
-                bal_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'BALANCED';", (tournament,)).fetchone()[0]
-                ins_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'INSUFFICIENT_DATA';", (tournament,)).fetchone()[0]
+            target_tourn = tournament
+            if target_tourn:
+                chk = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ?;", (target_tourn,)).fetchone()[0]
+                if chk == 0:
+                    alias_row = conn.execute(
+                        """
+                        SELECT tournament FROM matches 
+                        WHERE tournament LIKE ? OR ? LIKE ('%' || tournament || '%')
+                        LIMIT 1;
+                        """,
+                        (f"%{target_tourn.replace('2024', '').strip()}%", target_tourn),
+                    ).fetchone()
+                    if not alias_row:
+                        alias_row = conn.execute(
+                            """
+                            SELECT tournament FROM apdi_records 
+                            WHERE tournament LIKE ? OR ? LIKE ('%' || tournament || '%')
+                            LIMIT 1;
+                            """,
+                            (f"%{target_tourn.replace('2024', '').strip()}%", target_tourn),
+                        ).fetchone()
+                    if alias_row:
+                        target_tourn = alias_row[0]
+
+            if target_tourn:
+                att_count = conn.execute("SELECT COUNT(*) FROM attention_metrics WHERE tournament = ?;", (target_tourn,)).fetchone()[0]
+                perf_count = conn.execute("SELECT COUNT(*) FROM performance_metrics WHERE tournament = ?;", (target_tourn,)).fetchone()[0]
+                apdi_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ?;", (target_tourn,)).fetchone()[0]
+                over_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'OVER_ATTENDED';", (target_tourn,)).fetchone()[0]
+                under_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'UNDER_ATTENDED';", (target_tourn,)).fetchone()[0]
+                bal_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'BALANCED';", (target_tourn,)).fetchone()[0]
+                ins_count = conn.execute("SELECT COUNT(*) FROM apdi_records WHERE tournament = ? AND discrepancy_category = 'INSUFFICIENT_DATA';", (target_tourn,)).fetchone()[0]
             else:
                 att_count = conn.execute("SELECT COUNT(*) FROM attention_metrics;").fetchone()[0]
                 perf_count = conn.execute("SELECT COUNT(*) FROM performance_metrics;").fetchone()[0]
@@ -2180,7 +2204,7 @@ class SQLiteStorageManager:
             runs_count = conn.execute("SELECT COUNT(*) FROM analytics_runs;").fetchone()[0]
 
             return {
-                "tournament": tournament or "all",
+                "tournament": target_tourn or tournament or "all",
                 "attention_metrics_count": att_count,
                 "performance_metrics_count": perf_count,
                 "apdi_records_count": apdi_count,

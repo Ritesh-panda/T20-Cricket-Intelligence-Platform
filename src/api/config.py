@@ -34,7 +34,7 @@ class APISettings(BaseSettings):
 
     # Database & Storage
     db_path: str = Field(default="data/cricket_intel.db", description="Path to SQLite database")
-    default_tournament: str = "T20 World Cup 2024"
+    default_tournament: str = "ICC Men's T20 World Cup"
 
     # CORS Configuration (never allow credentials with wildcard)
     cors_origins: Union[List[str], str] = Field(

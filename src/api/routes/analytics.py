@@ -180,13 +180,13 @@ def _parse_apdi_row(row: Any) -> APDIRecordResponse:
 
 @router.get("/overview", response_model=AnalyticsOverviewResponse)
 def get_analytics_overview(
-    tournament: Optional[str] = Query("T20 World Cup 2024", description="Tournament filter"),
+    tournament: Optional[str] = Query(None, description="Tournament filter"),
     storage: SQLiteStorageManager = Depends(get_storage),
     preflight: AnalyticsPreflight = Depends(get_preflight),
 ) -> AnalyticsOverviewResponse:
     """Provides high-level summary of analytical runs, APDI distributions, and preflight status."""
     summary = storage.get_analytics_summary(tournament)
-    preflight_result = preflight.run_preflight(tournament or "T20 World Cup 2024")
+    preflight_result = preflight.run_preflight(tournament)
 
     sufficiency = (
         preflight_result.status.value
@@ -195,7 +195,7 @@ def get_analytics_overview(
     )
 
     return AnalyticsOverviewResponse(
-        tournament=tournament or "all",
+        tournament=summary["tournament"],
         attention_metrics_count=summary["attention_metrics_count"],
         performance_metrics_count=summary["performance_metrics_count"],
         apdi_records_count=summary["apdi_records_count"],

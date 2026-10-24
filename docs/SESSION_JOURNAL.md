@@ -648,7 +648,70 @@ Phase 6C is verified, committed (`ac6f44a`), and pushed to GitHub. Proceed to **
 - [`tests/test_phase7_validation.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_phase7_validation.py): 4 targeted integration tests.
 
 ### 10. Checkpoint
-Phase 7 is fully validated. Per mission instructions, stop here and do not begin Phase 8.
+Phase 7 is fully validated.
+
+---
+
+## Session 11 — Phase 8 Final Integration, Research Evaluation, and Release Readiness
+
+**Date:** 2026-10-24  
+**Commit Baseline:** `0094e80`  
+**Mission:** Complete Phase 8 by executing an exhaustive end-to-end verification audit, resolving substantiated defects, verifying research integrity, testing all integrated subsystems, and generating reproducible release documentation.
+
+### 1. Database Inventory & Forensic Discrepancy Reconciliation
+- Executed read-only database audit (`scripts/phase8_inventory_audit.py`):
+  - `schema_version`: Version 5.
+  - Matches: 10, Deliveries: 2,314, Teams: 9, Players: 107.
+  - Articles: 5, Paragraphs: 314, Normalized Texts: 314.
+  - Entity Mentions: 683 (607 RESOLVED, 60 AMBIGUOUS, 16 UNRESOLVED).
+  - Sentiment Baselines: 588, Dense Embeddings: 314.
+  - Topic Clusters: 3, Topic Assignments: 314.
+  - Performance Metrics: 162 (93 Batters, 60 Bowlers, 9 Teams).
+  - Attention Metrics: 23.
+  - APDI Records: 116 (13 Valid with non-null APDI; 103 INSUFFICIENT_DATA with null APDI).
+  - Commentary: 0 (Documented research boundary due to commercial publisher copyright and robots.txt disallows).
+- **Forensic Resolution of the "162 vs 116 vs 13" Reported Discrepancy:**
+  - `162`: Represents the total number of objective performance profiles evaluated (93 batters + 60 bowlers + 9 teams).
+  - `116`: Represents the total unique entities in the bounded corpus (107 players + 9 teams). 46 players participated across both batting and bowling cohorts ($93 + 60 - 46 = 107$). In SQLite, `apdi_records` stores one primary record per entity per run.
+  - `13`: The exact count of entities meeting minimum evidence thresholds with non-null calculated APDI values.
+  - `103`: Low-sample entities preserved under statistical safeguards with `apdi_value = NULL`.
+  - Discrepancy was a documentation ambiguity between *Performance Cohort Pairs Evaluated* vs *Stored APDI Rows*.
+
+### 2. Source Metadata & Research Corpus Validity Audit
+- Extracted genuine MediaWiki `<head>` metadata (`dc:modified` and revision IDs) from raw source HTML:
+  - `2024_Men's_T20_World_Cup_final.html`: Revision `1376810810`, Modified `2026-09-26T10:11:43Z`. Linked to Final match `1415755`.
+  - `2024_Men's_T20_World_Cup.html`: Revision `1376810834`, Modified `2026-09-26T10:12:01Z`. Removed inappropriate single-match link; scope set to `tournament_overview`.
+  - `India_at_the_Men's_T20_World_Cup.html`: Revision `1375665921`, Modified `2026-09-19T05:56:22Z`. Scope set to `team_campaign_history`.
+  - `2024_Men's_T20_World_Cup_squads.html`: Revision `1365016005`, Modified `2026-07-19T20:19:08Z`. Scope set to `squad_rosters`.
+  - `India-Pakistan_cricket_rivalry.html`: Revision `1380988006`, Modified `2026-10-19T07:45:20Z`. Scope set to `historical_bilateral`.
+- Replaced synthetic timestamps with verified Wikipedia revision timestamps and explicit retrieval timestamps (`2026-10-24T08:00:00Z`).
+
+### 3. Structured Cricket Data Correctness
+- Executed `scripts/validate_raw_matches_against_db.py`:
+  - 10/10 matches and all 2,314 deliveries verified against raw Cricsheet JSON source files.
+  - Legal deliveries, batter runs, extras, wides, no-balls, and wickets matched to 100% exact parity.
+  - Verified complex match formats: Super Over (Match 1415711 Pak vs USA) and DLS adjustments (Match 1415744 Ban vs Aus, Match 1415750 WI vs SA).
+
+### 4. Defect Corrections & Platform Hardening
+- **Tournament Name Aliasing Defect:** Fixed API overview and preflight checks failing when `tournament` was omitted or set to `'T20 World Cup 2024'`. Updated `AnalyticsPreflight` and `storage.get_analytics_summary()` to support alias resolution and fallback to available tournament records. Updated `Header.tsx` to dynamically query and display the active tournament from system status.
+- **APDI Schema & Null Value Safeguards:** Confirmed `INSUFFICIENT_DATA` entities strictly retain `apdi_value = NULL` without fallback fabrication.
+
+### 5. Regression Test Results
+- **Python Test Suite:** **104 passed in 19.23s** (`pytest tests/`), including 4 new regression tests in `tests/test_phase8_regression.py`.
+- **Frontend Vitest Suite:** **9 passed in 3.63s** (`npm run test` in `frontend/`).
+- **Frontend TypeScript:** **0 errors** (`npm run typecheck` in `frontend/`).
+- **Frontend Production Build:** Built successfully in 20.47s (`npm run build` in `frontend/`).
+
+### 6. Deliverables Produced
+- [`docs/PHASE_8_FINAL_EVALUATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/PHASE_8_FINAL_EVALUATION.md): Comprehensive evaluation report distinguishing verified facts, reproduced measurements, and research limitations.
+- [`docs/PHASE_8_RELEASE_CHECKLIST.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/PHASE_8_RELEASE_CHECKLIST.md): Platform release readiness checklist.
+- [`scripts/phase8_inventory_audit.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/scripts/phase8_inventory_audit.py): Automated database inventory and reconciliation script.
+- [`scripts/validate_raw_matches_against_db.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/scripts/validate_raw_matches_against_db.py): Raw Cricsheet JSON to SQLite database verification script.
+- [`tests/test_phase8_regression.py`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/tests/test_phase8_regression.py): Phase 8 regression tests.
+
+### 7. Checkpoint & Completion
+Phase 8 is fully completed. All platform subsystems are integrated, verified, tested, and documented. Strictly per instructions, do not begin Phase 9 or any further feature phases.
+
 
 
 
