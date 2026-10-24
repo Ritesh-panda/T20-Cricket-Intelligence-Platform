@@ -187,10 +187,21 @@ flowchart TD
 - **Preflight Quality Checker (`AnalyticsPreflight`)**:
   - Gatekeeper verifying entity resolution confidence, match reconciliation, and minimum data thresholds.
 
-### Module L: API & Dashboard Architecture (Subphases 6B & 6C)
-- **FastAPI Backend**: Provides asynchronous JSON endpoints with automatic OpenAPI documentation.
-- **React Frontend**: Built with Vite, TypeScript, and modern data-viz components (Chart.js / Recharts / D3).
-- **Local Proxying**: Vite development server proxies `/api` requests to FastAPI at `localhost:8000`.
+### Module L: API & Dashboard Architecture (Phases 6B & 6C)
+- **FastAPI Research Backend (`src/api/`)**:
+  - Implemented in Phase 6B as a production-grade, modular, read-only REST service.
+  - Endpoints under `/health`, `/ready`, and `/api/v1/`:
+    - Health & Readiness: `/health`, `/ready`, `/api/v1/status`
+    - Matches & Scorecards: `/api/v1/matches`, `/api/v1/matches/{id}`, `/api/v1/matches/{id}/deliveries`, `/api/v1/matches/{id}/performance`
+    - Entities: `/api/v1/players`, `/api/v1/players/{id}`, `/api/v1/teams`, `/api/v1/teams/{id}`
+    - Articles & Commentary: `/api/v1/articles`, `/api/v1/articles/{id}`, `/api/v1/articles/{id}/paragraphs`, `/api/v1/commentary`, `/api/v1/commentary/{id}`
+    - NLP & Narratives: `/api/v1/topics`, `/api/v1/topics/{id}`, `/api/v1/entities`, `/api/v1/narratives/timeline`, `/api/v1/narratives/matches`
+    - Analytics & APDI: `/api/v1/analytics/overview`, `/api/v1/analytics/attention`, `/api/v1/analytics/performance`, `/api/v1/analytics/framing`, `/api/v1/analytics/apdi`, `/api/v1/analytics/apdi/{entity_id}`, `/api/v1/analytics/validation`
+    - Observability: `/api/v1/observability/ingestion-runs`, `/api/v1/observability/sources`, `/api/v1/observability/pipeline-stats`, `/api/v1/observability/analytics-runs`
+  - Truthful Empty-State Invariants: Returns HTTP 200 with `items: []` and preserves `INSUFFICIENT_DATA` with `null` numerical score when analytical evidence is incomplete.
+  - Safe Parameterization: All SQL statements use parameterized bindings (`?`). Centralized exception handlers prevent database stack traces or credentials from leaking.
+- **Frontend Dashboard (Phase 6C - Deferred)**:
+  - Consumes `/api/v1` endpoints for sports intelligence visualizations.
 
 ---
 

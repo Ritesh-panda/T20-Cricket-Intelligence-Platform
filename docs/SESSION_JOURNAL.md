@@ -459,4 +459,51 @@ Proceed to **Phase 6: Media Attention vs Performance Analytics, Serving API & Da
 ### 4. Next Checkpoint & Action
 Proceed to **Phase 6B: FastAPI Serving Layer & Analytics Endpoints**.
 
+---
+
+## Session 08 — 2026-10-24 (Phase 6B: FastAPI Serving Layer & Research API)
+
+### 2. Implementation & Components Created
+- **API Package Structure (`src/api/`)**:
+  - `src/api/config.py`: Environment-backed `APISettings` managing database paths, CORS whitelist, pagination limits, and OpenAPI metadata.
+  - `src/api/dependencies.py`: Dependency injection providers for `SQLiteStorageManager`, `AnalyticsPreflight`, analytics calculators, and pagination bounds.
+  - `src/api/errors.py`: Custom API exception hierarchy (`ResourceNotFoundError`, `InvalidParameterError`, `DatabaseError`) and centralized exception handlers rendering uniform `ErrorResponse` envelopes without leaking database details.
+  - `src/api/schemas/`: Explicit Pydantic response models (`common.py`, `matches.py`, `entities.py`, `editorial.py`, `nlp.py`, `analytics.py`, `observability.py`).
+  - `src/api/routes/`: Route modules covering all 7 required functional areas (`health.py`, `matches.py`, `players.py`, `teams.py`, `articles.py`, `commentary.py`, `nlp.py`, `analytics.py`, `observability.py`).
+  - `src/api/main.py`: Application factory `create_app()` with async lifespan persistence initialization, restrictive CORS middleware, and automatic OpenAPI documentation.
+- **Testing Suite (`tests/test_api.py`)**:
+  - 16 comprehensive integration and unit tests covering application startup, liveness, readiness, empty-state collections, 404 handling, pagination boundaries, SQL injection resistance, populated match performance calculations, canonical entities, article/commentary retrieval, topic clusters, narrative timeline, APDI status preservation, analytics validation, observability without credential leakage, and CORS preflight.
+  - All tests execute against temporary, isolated SQLite databases. Real databases are never mutated.
+
+### 3. Test Verification & Suite Results
+- **Full Test Suite Results**: **96 passed, 0 failed in 97.53s**:
+  ```text
+  tests/test_analysis.py: 18 passed
+  tests/test_analytics.py: 9 passed
+  tests/test_api.py: 16 passed
+  tests/test_commentary_adapter.py: 2 passed
+  tests/test_cricsheet_adapter.py: 2 passed
+  tests/test_integration.py: 1 passed
+  tests/test_news_adapter.py: 1 passed
+  tests/test_nlp.py: 18 passed
+  tests/test_pipeline.py: 20 passed
+  tests/test_schemas.py: 5 passed
+  tests/test_storage.py: 4 passed
+  ================== 96 passed, 6 warnings in 97.53s ==================
+  ```
+- **Live Smoke Test Outcome**:
+  - `/health`: HTTP 200 `{'status': 'healthy', 'version': '1.0.0'}`
+  - `/ready`: HTTP 200 `{'status': 'ready', 'database_accessible': True, 'schema_version': 5, 'database_tables_count': 28}`
+  - `/api/v1/status`: HTTP 200 `{'pipeline_status': 'empty', 'data_sufficiency_status': 'INSUFFICIENT_DATA', 'is_analytics_ready': False}`
+  - `/api/v1/matches`: HTTP 200 `{'items': [], 'pagination': {'total': 0, 'limit': 20, 'offset': 0, 'has_more': False}}`
+  - `/openapi.json`: HTTP 200 with 32 documented endpoint paths.
+
+### 4. Documentation Deliverables
+- [`docs/API_DOCUMENTATION.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/API_DOCUMENTATION.md): Complete REST endpoint reference, query parameters, schemas, error codes, and local startup instructions.
+- [`src/api/README.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/src/api/README.md): Quick developer guide for the API package.
+- [`docs/ARCHITECTURE.md`](file:///c:/Users/Ritesh%20Panda/OneDrive/Desktop/atsma_lab/docs/ARCHITECTURE.md): Updated Module L with API architectural patterns.
+
+### 5. Next Checkpoint & Action
+Phase 6B is verified and complete. Proceed to **Phase 6C: Frontend & Intelligence Dashboard** when ready.
+
 
