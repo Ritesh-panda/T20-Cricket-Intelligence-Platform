@@ -196,16 +196,37 @@ def get_match_performance(
             (match_id,),
         ).fetchall()
 
+        # Fetch player metadata for clean display names
+        player_rows = conn.execute(
+            "SELECT player_id, full_name, primary_team_id FROM players;"
+        ).fetchall()
+        players_meta = {
+            r["player_id"]: {
+                "full_name": r["full_name"],
+                "team_id": r["primary_team_id"],
+            }
+            for r in player_rows
+        }
+
+    def _get_player_name(pid: str) -> str:
+        if pid in players_meta and players_meta[pid]["full_name"]:
+            return players_meta[pid]["full_name"]
+        # Fallback formatting: player_virat_kohli -> Virat Kohli
+        clean = pid.replace("player_", "").replace("_", " ").strip()
+        return clean.title() if clean else pid
+
     # Aggregate performance from deliveries
-    batters_dict: Dict[str, Dict[str, Any]] = {}
-    bowlers_dict: Dict[str, Dict[str, Any]] = {}
+    batters_dict: Dict[Tuple[int, str], Dict[str, Any]] = {}
+    bowlers_dict: Dict[Tuple[int, str], Dict[str, Any]] = {}
     teams_dict: Dict[int, Dict[str, Any]] = {}
+    bowler_over_runs: Dict[Tuple[int, str, int], Dict[str, int]] = {}
 
     team1_id = match_row["team1_id"]
     team2_id = match_row["team2_id"]
 
     for d in deliveries:
         innings = int(d["innings"])
+        over_num = int(d["over_num"])
         batter_id = d["batter_id"]
         bowler_id = d["bowler_id"]
         batter_runs = int(d["batter_runs"])
@@ -219,7 +240,6 @@ def get_match_performance(
 
         # Team innings aggregation
         if innings not in teams_dict:
-            # Innings 1 is team1 or toss winner batting first; best effort mapping
             team_assigned = team1_id if innings == 1 else team2_id
             teams_dict[innings] = {
                 "team_id": team_assigned,
@@ -227,75 +247,106 @@ def get_match_performance(
                 "total_runs": 0,
                 "total_wickets": 0,
                 "legal_balls": 0,
+                "extras": 0,
             }
         teams_dict[innings]["total_runs"] += total_runs
+        teams_dict[innings]["extras"] += extra_runs
         if is_wicket:
             teams_dict[innings]["total_wickets"] += 1
         if is_legal:
             teams_dict[innings]["legal_balls"] += 1
 
-        # Batter aggregation
-        if batter_id not in batters_dict:
-            batters_dict[batter_id] = {
+        # Batter aggregation by innings and batter_id
+        bat_key = (innings, batter_id)
+        if bat_key not in batters_dict:
+            batters_dict[bat_key] = {
                 "player_id": batter_id,
+                "player_name": _get_player_name(batter_id),
+                "team_id": players_meta.get(batter_id, {}).get("team_id") or (team1_id if innings == 1 else team2_id),
+                "innings": innings,
                 "runs": 0,
                 "balls": 0,
                 "fours": 0,
                 "sixes": 0,
                 "is_out": False,
                 "dismissal_kind": None,
+                "order": len(batters_dict),
             }
-        batters_dict[batter_id]["runs"] += batter_runs
-        # Legal delivery faced or no-ball counts as ball faced (wides do not)
+        batters_dict[bat_key]["runs"] += batter_runs
         if extra_type != "wides":
-            batters_dict[batter_id]["balls"] += 1
+            batters_dict[bat_key]["balls"] += 1
         if batter_runs == 4:
-            batters_dict[batter_id]["fours"] += 1
+            batters_dict[bat_key]["fours"] += 1
         elif batter_runs == 6:
-            batters_dict[batter_id]["sixes"] += 1
+            batters_dict[bat_key]["sixes"] += 1
 
         # Check dismissal
         if is_wicket and player_dismissed_id:
-            if player_dismissed_id in batters_dict:
-                batters_dict[player_dismissed_id]["is_out"] = True
-                batters_dict[player_dismissed_id]["dismissal_kind"] = wicket_kind
+            d_key = (innings, player_dismissed_id)
+            if d_key in batters_dict:
+                batters_dict[d_key]["is_out"] = True
+                batters_dict[d_key]["dismissal_kind"] = wicket_kind
             else:
-                batters_dict[player_dismissed_id] = {
+                batters_dict[d_key] = {
                     "player_id": player_dismissed_id,
+                    "player_name": _get_player_name(player_dismissed_id),
+                    "team_id": players_meta.get(player_dismissed_id, {}).get("team_id") or (team1_id if innings == 1 else team2_id),
+                    "innings": innings,
                     "runs": 0,
                     "balls": 0,
                     "fours": 0,
                     "sixes": 0,
                     "is_out": True,
                     "dismissal_kind": wicket_kind,
+                    "order": len(batters_dict),
                 }
 
         # Bowler aggregation
-        if bowler_id not in bowlers_dict:
-            bowlers_dict[bowler_id] = {
+        bowl_key = (innings, bowler_id)
+        if bowl_key not in bowlers_dict:
+            bowlers_dict[bowl_key] = {
                 "player_id": bowler_id,
+                "player_name": _get_player_name(bowler_id),
+                "team_id": players_meta.get(bowler_id, {}).get("team_id") or (team2_id if innings == 1 else team1_id),
+                "innings": innings,
                 "legal_balls": 0,
                 "runs_conceded": 0,
                 "wickets": 0,
+                "order": len(bowlers_dict),
             }
         if is_legal:
-            bowlers_dict[bowler_id]["legal_balls"] += 1
-        # Runs charged to bowler include batter runs plus wides and noballs
-        if extra_type in ("wides", "noballs") or extra_type is None:
-            bowlers_dict[bowler_id]["runs_conceded"] += total_runs
-        else:
-            bowlers_dict[bowler_id]["runs_conceded"] += batter_runs
+            bowlers_dict[bowl_key]["legal_balls"] += 1
+
+        runs_charged = total_runs if (extra_type in ("wides", "noballs") or extra_type is None) else batter_runs
+        bowlers_dict[bowl_key]["runs_conceded"] += runs_charged
 
         if is_wicket and wicket_kind not in ("run out", "retired hurt"):
-            bowlers_dict[bowler_id]["wickets"] += 1
+            bowlers_dict[bowl_key]["wickets"] += 1
 
-    # Format batter scores
+        # Track maiden overs: tally legal balls and runs conceded per over
+        over_key = (innings, bowler_id, over_num)
+        if over_key not in bowler_over_runs:
+            bowler_over_runs[over_key] = {"legal": 0, "runs": 0}
+        if is_legal:
+            bowler_over_runs[over_key]["legal"] += 1
+        bowler_over_runs[over_key]["runs"] += runs_charged
+
+    # Calculate maidens per bowler
+    maidens_map: Dict[Tuple[int, str], int] = {}
+    for (inn, b_id, _), ov_data in bowler_over_runs.items():
+        if ov_data["legal"] == 6 and ov_data["runs"] == 0:
+            maidens_map[(inn, b_id)] = maidens_map.get((inn, b_id), 0) + 1
+
+    # Format batter scores in chronological batting order
     batters: List[MatchBatterScore] = []
-    for b in batters_dict.values():
+    for b in sorted(batters_dict.values(), key=lambda x: (x["innings"], x["order"])):
         sr = round((b["runs"] / b["balls"]) * 100.0, 2) if b["balls"] > 0 else 0.0
         batters.append(
             MatchBatterScore(
                 player_id=b["player_id"],
+                player_name=b["player_name"],
+                team_id=b["team_id"],
+                innings=b["innings"],
                 runs=b["runs"],
                 balls=b["balls"],
                 fours=b["fours"],
@@ -308,7 +359,8 @@ def get_match_performance(
 
     # Format bowler scores
     bowlers: List[MatchBowlerScore] = []
-    for bw in bowlers_dict.values():
+    for bw in sorted(bowlers_dict.values(), key=lambda x: (x["innings"], x["order"])):
+        b_key = (bw["innings"], bw["player_id"])
         overs = (bw["legal_balls"] // 6) + ((bw["legal_balls"] % 6) / 10.0)
         economy = (
             round(bw["runs_conceded"] / (bw["legal_balls"] / 6.0), 2)
@@ -318,8 +370,12 @@ def get_match_performance(
         bowlers.append(
             MatchBowlerScore(
                 player_id=bw["player_id"],
+                player_name=bw["player_name"],
+                team_id=bw["team_id"],
+                innings=bw["innings"],
                 overs=overs,
                 legal_balls=bw["legal_balls"],
+                maidens=maidens_map.get(b_key, 0),
                 runs_conceded=bw["runs_conceded"],
                 wickets=bw["wickets"],
                 economy=economy,
@@ -337,6 +393,7 @@ def get_match_performance(
                 total_runs=t["total_runs"],
                 total_wickets=t["total_wickets"],
                 legal_overs=overs,
+                extras=t["extras"],
             )
         )
 

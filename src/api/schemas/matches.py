@@ -50,6 +50,9 @@ class DeliveryResponse(BaseModel):
 
 class MatchBatterScore(BaseModel):
     player_id: str
+    player_name: Optional[str] = None
+    team_id: Optional[str] = None
+    innings: Optional[int] = None
     runs: int
     balls: int
     fours: int
@@ -61,8 +64,12 @@ class MatchBatterScore(BaseModel):
 
 class MatchBowlerScore(BaseModel):
     player_id: str
+    player_name: Optional[str] = None
+    team_id: Optional[str] = None
+    innings: Optional[int] = None
     overs: float
     legal_balls: int
+    maidens: Optional[int] = 0
     runs_conceded: int
     wickets: int
     economy: Optional[float] = None
@@ -74,6 +81,7 @@ class MatchTeamScore(BaseModel):
     total_runs: int
     total_wickets: int
     legal_overs: float
+    extras: Optional[int] = 0
 
 
 class MatchPerformanceScorecard(BaseModel):

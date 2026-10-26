@@ -94,6 +94,9 @@ export interface DeliveryResponse {
 
 export interface MatchBatterScore {
   player_id: string;
+  player_name?: string | null;
+  team_id?: string | null;
+  innings?: number | null;
   runs: number;
   balls: number;
   fours: number;
@@ -105,8 +108,12 @@ export interface MatchBatterScore {
 
 export interface MatchBowlerScore {
   player_id: string;
+  player_name?: string | null;
+  team_id?: string | null;
+  innings?: number | null;
   overs: number;
   legal_balls: number;
+  maidens?: number | null;
   runs_conceded: number;
   wickets: number;
   economy: number | null;
@@ -118,6 +125,7 @@ export interface MatchTeamScore {
   total_runs: number;
   total_wickets: number;
   legal_overs: number;
+  extras?: number | null;
 }
 
 export interface MatchPerformanceScorecard {

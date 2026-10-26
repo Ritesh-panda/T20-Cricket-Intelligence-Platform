@@ -24,6 +24,7 @@ export const MatchesPage: React.FC = () => {
   const [tournament, setTournament] = useState<string>('');
   const [season, setSeason] = useState<string>('');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [activeInnings, setActiveInnings] = useState<number>(1);
   const [page, setPage] = useState<number>(0);
   const limit = 15;
 
@@ -193,7 +194,10 @@ export const MatchesPage: React.FC = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedMatchId(m.match_id)}
+                          onClick={() => {
+                            setSelectedMatchId(m.match_id);
+                            setActiveInnings(1);
+                          }}
                           className="text-xs py-1 px-2.5 h-7"
                         >
                           Scorecard
@@ -237,127 +241,223 @@ export const MatchesPage: React.FC = () => {
 
           {/* Match Scorecard Drawer */}
           <div>
-            <Card className="sticky top-20">
-              <CardHeader>
-                <div>
-                  <CardTitle>Delivery-Derived Scorecard</CardTitle>
-                  <CardDescription>
-                    {selectedMatchId ? `Match ID: ${selectedMatchId}` : 'Select a match to inspect'}
-                  </CardDescription>
+            <Card className="sticky top-20 shadow-md">
+              <CardHeader className="pb-3 border-b border-slate-100 dark:border-cricket-navy-800">
+                <div className="flex items-start justify-between w-full">
+                  <div>
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Trophy className="w-4 h-4 text-emerald-500" />
+                      Detailed Match Scorecard
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      {selectedMatchId
+                        ? `Delivery-audited ball-by-ball performance`
+                        : 'Select any match from the directory to inspect its full scorecard'}
+                    </CardDescription>
+                  </div>
+                  {selectedMatchId && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedMatchId(null)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-                {selectedMatchId && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedMatchId(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="pt-4 space-y-4">
                 {!selectedMatchId ? (
-                  <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
-                    Click "Scorecard" on any match to calculate batting & bowling performance.
+                  <div className="py-16 text-center text-xs text-slate-400 dark:text-slate-500">
+                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-cricket-navy-700" />
+                    Select "Scorecard" on any fixture to calculate complete batting and bowling breakdowns.
                   </div>
                 ) : isScorecardLoading ? (
                   <div className="space-y-3 py-6">
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-8 w-full" />
-                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-40 w-full" />
                   </div>
                 ) : scorecardError ? (
                   <p className="text-xs text-rose-500 py-4 font-mono">
                     {extractErrorMessage(scorecardError)}
                   </p>
                 ) : scorecard ? (
-                  <div className="space-y-4">
-                    {/* Innings Totals */}
-                    <div className="space-y-2">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Innings Totals
-                      </span>
-                      {scorecard.team_scores.map((t, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 text-xs"
-                        >
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {t.team_id} (Innings {t.innings})
-                          </span>
-                          <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                            {t.total_runs}/{t.total_wickets}{' '}
-                            <span className="text-[10px] font-normal text-slate-400">
-                              ({t.legal_overs} ov)
-                            </span>
-                          </span>
+                  <div className="space-y-5">
+                    {/* Match Context Pill */}
+                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {scorecard.venue}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {scorecard.match_date}
+                        </span>
+                      </div>
+                      {scorecard.winner_id ? (
+                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          🏆 {scorecard.winner_id} won match
                         </div>
-                      ))}
-                    </div>
+                      ) : (
+                        <div className="text-xs text-slate-500">Match concluded / No result</div>
+                      )}
 
-                    {/* Top Batters */}
-                    <div className="space-y-2">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Top Batters
-                      </span>
-                      <div className="space-y-1.5">
-                        {scorecard.batters.slice(0, 5).map((b, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-cricket-navy-800 last:border-0"
+                      {/* Innings Tabs / Scores */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        {scorecard.team_scores.map((t) => (
+                          <button
+                            key={t.innings}
+                            onClick={() => setActiveInnings(t.innings)}
+                            className={`p-2 rounded-lg text-left transition-all border ${
+                              activeInnings === t.innings
+                                ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/50 shadow-sm'
+                                : 'bg-white dark:bg-cricket-navy-900 border-slate-200 dark:border-cricket-navy-800 hover:border-slate-300'
+                            }`}
                           >
-                            <div>
-                              <span className="font-medium text-slate-800 dark:text-slate-200">
-                                {b.player_id}
-                              </span>
-                              {b.is_out && (
-                                <span className="ml-1 text-[10px] text-slate-400">
-                                  ({b.dismissal_kind || 'out'})
-                                </span>
-                              )}
+                            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                              Innings {t.innings} • {t.team_id}
                             </div>
-                            <div className="font-mono text-right">
-                              <span className="font-bold">{b.runs}</span>
-                              <span className="text-slate-400 ml-1 text-[11px]">
-                                ({b.balls})
-                              </span>
-                              <span className="text-emerald-600 dark:text-emerald-400 ml-2 text-[10px]">
-                                SR {b.strike_rate ?? '-'}
+                            <div className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5">
+                              {t.total_runs}/{t.total_wickets}
+                              <span className="text-[10px] font-normal text-slate-500 ml-1">
+                                ({t.legal_overs} ov)
                               </span>
                             </div>
-                          </div>
+                          </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* Top Bowlers */}
+                    {/* Active Innings Batting Card */}
                     <div className="space-y-2">
-                      <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                        Top Bowlers
-                      </span>
-                      <div className="space-y-1.5">
-                        {scorecard.bowlers.slice(0, 5).map((bw, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center justify-between text-xs py-1 border-b border-slate-100 dark:border-cricket-navy-800 last:border-0"
-                          >
-                            <span className="font-medium text-slate-800 dark:text-slate-200">
-                              {bw.player_id}
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <span>
+                          Batting (Innings {activeInnings})
+                        </span>
+                        <span className="text-[10px] font-mono lowercase">
+                          r • b • 4s • 6s • sr
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-cricket-navy-800">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-50 dark:bg-cricket-navy-950 text-slate-500 text-[10px] uppercase font-semibold">
+                            <tr>
+                              <th className="py-1.5 px-2.5">Batter</th>
+                              <th className="py-1.5 px-1.5">Dismissal</th>
+                              <th className="py-1.5 px-1.5 text-right">R</th>
+                              <th className="py-1.5 px-1.5 text-right">B</th>
+                              <th className="py-1.5 px-1.5 text-right">4s</th>
+                              <th className="py-1.5 px-1.5 text-right">6s</th>
+                              <th className="py-1.5 px-2 text-right">SR</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-cricket-navy-800 bg-white dark:bg-cricket-navy-900">
+                            {scorecard.batters
+                              .filter((b) => !b.innings || b.innings === activeInnings)
+                              .map((b, i) => (
+                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-cricket-navy-800/40">
+                                  <td className="py-1.5 px-2.5 font-medium text-slate-900 dark:text-slate-100 truncate max-w-[120px]">
+                                    {b.player_name || b.player_id.replace('player_', '').replace(/_/g, ' ')}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[90px]">
+                                    {b.is_out ? (
+                                      <span className="text-rose-500/90 dark:text-rose-400">
+                                        {b.dismissal_kind || 'out'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                        not out
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
+                                    {b.runs}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-500">
+                                    {b.balls}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-500">
+                                    {b.fours}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-500">
+                                    {b.sixes}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-700 dark:text-slate-300">
+                                    {b.strike_rate != null ? b.strike_rate.toFixed(1) : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Extras & Total Row */}
+                      {(() => {
+                        const activeTeamScore = scorecard.team_scores.find((t) => t.innings === activeInnings);
+                        return activeTeamScore ? (
+                          <div className="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 dark:bg-cricket-navy-950 rounded-md text-[11px] font-mono border border-slate-200/60 dark:border-cricket-navy-800">
+                            <span className="text-slate-500">
+                              Extras: <strong className="text-slate-800 dark:text-slate-200">{activeTeamScore.extras ?? 0}</strong>
                             </span>
-                            <div className="font-mono text-right">
-                              <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                                {bw.wickets}/{bw.runs_conceded}
-                              </span>
-                              <span className="text-slate-400 ml-1 text-[11px]">
-                                ({bw.overs} ov)
-                              </span>
-                              <span className="text-slate-500 ml-2 text-[10px]">
-                                Econ {bw.economy ?? '-'}
-                              </span>
-                            </div>
+                            <span className="font-semibold text-slate-900 dark:text-slate-100">
+                              Total: {activeTeamScore.total_runs}/{activeTeamScore.total_wickets} ({activeTeamScore.legal_overs} ov)
+                            </span>
                           </div>
-                        ))}
+                        ) : null;
+                      })()}
+                    </div>
+
+                    {/* Active Innings Bowling Card */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
+                        <span>
+                          Bowling (Innings {activeInnings})
+                        </span>
+                        <span className="text-[10px] font-mono lowercase">
+                          o • m • r • w • econ
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-cricket-navy-800">
+                        <table className="w-full text-xs text-left">
+                          <thead className="bg-slate-50 dark:bg-cricket-navy-950 text-slate-500 text-[10px] uppercase font-semibold">
+                            <tr>
+                              <th className="py-1.5 px-2.5">Bowler</th>
+                              <th className="py-1.5 px-1.5 text-right">O</th>
+                              <th className="py-1.5 px-1.5 text-right">M</th>
+                              <th className="py-1.5 px-1.5 text-right">R</th>
+                              <th className="py-1.5 px-1.5 text-right">W</th>
+                              <th className="py-1.5 px-2 text-right">Econ</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-cricket-navy-800 bg-white dark:bg-cricket-navy-900">
+                            {scorecard.bowlers
+                              .filter((bw) => !bw.innings || bw.innings === activeInnings)
+                              .map((bw, i) => (
+                                <tr key={i} className="hover:bg-slate-50/50 dark:hover:bg-cricket-navy-800/40">
+                                  <td className="py-1.5 px-2.5 font-medium text-slate-900 dark:text-slate-100 truncate max-w-[120px]">
+                                    {bw.player_name || bw.player_id.replace('player_', '').replace(/_/g, ' ')}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 dark:text-slate-300">
+                                    {bw.overs.toFixed(1)}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-500">
+                                    {bw.maidens ?? 0}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono text-slate-600 dark:text-slate-300">
+                                    {bw.runs_conceded}
+                                  </td>
+                                  <td className="py-1.5 px-1.5 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                    {bw.wickets}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-slate-500">
+                                    {bw.economy != null ? bw.economy.toFixed(2) : '-'}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </div>
