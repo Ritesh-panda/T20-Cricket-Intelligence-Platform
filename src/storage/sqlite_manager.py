@@ -1658,7 +1658,7 @@ class SQLiteStorageManager:
             ]
             conn.executemany(
                 """
-                INSERT INTO topic_assignments (
+                INSERT OR REPLACE INTO topic_assignments (
                     assignment_id, cluster_id, norm_id, source_id,
                     distance_to_centroid, membership_score
                 ) VALUES (?, ?, ?, ?, ?, ?);

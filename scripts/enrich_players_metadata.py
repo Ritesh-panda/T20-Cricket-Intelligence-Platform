@@ -174,6 +174,9 @@ def enrich_all_players():
             if new_full_name not in aliases:
                 aliases.append(new_full_name)
 
+            if not bowl_style or "n/a" in bowl_style.lower() or "\ufffd" in bowl_style:
+                bowl_style = "None (Specialist Batter)"
+
             c.execute("""
                 UPDATE players
                 SET full_name = ?, batting_style = ?, bowling_style = ?, aliases_json = ?

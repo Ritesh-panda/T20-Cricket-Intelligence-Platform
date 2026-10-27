@@ -538,7 +538,7 @@ def cluster_topics_cmd(args: argparse.Namespace) -> int:
         c_id_str = f"{run_id}_c{cid}"
         assignment_recs.append(
             TopicAssignmentRecord(
-                assignment_id=f"assign_{run_id[:12]}_{i}_{r['norm_id']}",
+                assignment_id=f"assign_{run_id}_{i}_{r['norm_id']}",
                 cluster_id=c_id_str,
                 norm_id=r["norm_id"],
                 source_id=r["source_id"],
@@ -852,6 +852,20 @@ def compute_performance_cmd(args: argparse.Namespace) -> int:
     calc = CricketPerformanceCalculator()
 
     with storage._get_connection() as conn:
+        target_tournament = args.tournament
+        check_t = conn.execute("SELECT 1 FROM matches WHERE tournament = ? LIMIT 1;", (args.tournament,)).fetchone()
+        if not check_t:
+            alias_row = conn.execute(
+                """
+                SELECT tournament FROM matches 
+                WHERE tournament LIKE ? OR ? LIKE ('%' || tournament || '%')
+                LIMIT 1;
+                """,
+                (f"%{args.tournament.replace('2024', '').strip()}%", args.tournament),
+            ).fetchone()
+            if alias_row:
+                target_tournament = alias_row[0]
+
         deliveries = [
             dict(r)
             for r in conn.execute(
@@ -860,12 +874,12 @@ def compute_performance_cmd(args: argparse.Namespace) -> int:
                 JOIN matches m ON d.match_id = m.match_id
                 WHERE m.tournament = ?;
                 """,
-                (args.tournament,),
+                (target_tournament,),
             ).fetchall()
         ]
         matches = [
             dict(r)
-            for r in conn.execute("SELECT * FROM matches WHERE tournament = ?;", (args.tournament,)).fetchall()
+            for r in conn.execute("SELECT * FROM matches WHERE tournament = ?;", (target_tournament,)).fetchall()
         ]
         player_names = {
             r["player_id"]: r["full_name"]
@@ -961,11 +975,51 @@ def compute_apdi_cmd(args: argparse.Namespace) -> int:
         print("Aborting APDI computation without fabricating speculative scores.\n")
         return 0
 
-    all_att = {r["entity_id"]: r for r in storage.get_all_attention_metrics(tournament=args.tournament)}
     all_perf = storage.get_all_performance_metrics(tournament=args.tournament)
+    all_att = {r["entity_id"]: r for r in storage.get_all_attention_metrics(tournament=args.tournament)}
+
+    # Auto-cascade: if performance metrics not yet calculated, compute them
+    if not all_perf:
+        print("[INFO] Performance metrics not found in database. Automatically calculating cricket performance...")
+        perf_args = argparse.Namespace(
+            db_path=args.db_path,
+            config=getattr(args, "config", "config/sources.yaml"),
+            tournament=args.tournament,
+            role="all",
+            dry_run=args.dry_run,
+        )
+        compute_performance_cmd(perf_args)
+        all_perf = storage.get_all_performance_metrics(tournament=args.tournament)
+
+    # Auto-cascade: if attention metrics not yet calculated, compute them
+    if not all_att:
+        print("[INFO] Attention metrics not found in database. Checking NLP entity mentions...")
+        with storage._get_connection() as conn:
+            mention_count = conn.execute("SELECT COUNT(*) FROM entity_mentions;").fetchone()[0]
+        if mention_count == 0:
+            print("[INFO] Processing crawled articles through NLP pipeline...")
+            nlp_args = argparse.Namespace(
+                db_path=args.db_path,
+                config=getattr(args, "config", "config/sources.yaml"),
+                limit=None,
+                source=None,
+                dry_run=args.dry_run,
+                all=False,
+            )
+            process_text_cmd(nlp_args)
+
+        attn_args = argparse.Namespace(
+            db_path=args.db_path,
+            config=getattr(args, "config", "config/sources.yaml"),
+            tournament=args.tournament,
+            entity=None,
+            dry_run=args.dry_run,
+        )
+        compute_attention_cmd(attn_args)
+        all_att = {r["entity_id"]: r for r in storage.get_all_attention_metrics(tournament=args.tournament)}
 
     if not all_perf:
-        print("\n[INFO] No performance metrics found in database. Run 'compute-performance' first.\n")
+        print("\n[INFO] No match or delivery records found to compute performance. Ingest match files with 'run' first.\n")
         return 0
 
     with storage._get_connection() as conn:
@@ -1050,6 +1104,11 @@ def compute_apdi_cmd(args: argparse.Namespace) -> int:
         )
         storage.record_analytics_run(run_rec)
         print(f"APDI run {run_id} persisted to database ({len(all_apdi_records)} records).\n")
+        try:
+            from scripts.enrich_players_metadata import enrich_all_players
+            enrich_all_players()
+        except Exception as e:
+            logger.debug(f"Player enrichment notice: {e}")
     else:
         print(f"APDI run previewed (dry-run). {len(all_apdi_records)} records computed.\n")
 
@@ -1265,25 +1324,25 @@ def main() -> int:
 
     # Phase 6A commands
     preflight_parser = subparsers.add_parser("analytics-preflight", help="Check data eligibility and quality gates")
-    preflight_parser.add_argument("--tournament", default="T20 World Cup 2024", help="Tournament filter")
+    preflight_parser.add_argument("--tournament", default="ICC Men's T20 World Cup", help="Tournament filter")
 
     attn_parser = subparsers.add_parser("compute-attention", help="Compute media attention metrics across corpus")
-    attn_parser.add_argument("--tournament", default="T20 World Cup 2024", help="Tournament filter")
+    attn_parser.add_argument("--tournament", default="ICC Men's T20 World Cup", help="Tournament filter")
     attn_parser.add_argument("--entity", default=None, help="Optional player or team filter")
     attn_parser.add_argument("--dry-run", action="store_true", help="Preview without database writes")
 
     perf_parser = subparsers.add_parser("compute-performance", help="Compute objective cricket performance statistics")
-    perf_parser.add_argument("--tournament", default="T20 World Cup 2024", help="Tournament filter")
+    perf_parser.add_argument("--tournament", default="ICC Men's T20 World Cup", help="Tournament filter")
     perf_parser.add_argument("--role", choices=["all", "batter", "bowler", "team"], default="all", help="Role filter")
     perf_parser.add_argument("--dry-run", action="store_true", help="Preview without database writes")
 
     apdi_parser = subparsers.add_parser("compute-apdi", help="Compute Attention-to-Performance Discrepancy Index")
-    apdi_parser.add_argument("--tournament", default="T20 World Cup 2024", help="Tournament filter")
+    apdi_parser.add_argument("--tournament", default="ICC Men's T20 World Cup", help="Tournament filter")
     apdi_parser.add_argument("--role", choices=["all", "batter", "bowler", "team"], default="all", help="Role filter")
     apdi_parser.add_argument("--dry-run", action="store_true", help="Preview without database writes")
 
     report_parser = subparsers.add_parser("analytics-report", help="Display analytical report and evidence lineage")
-    report_parser.add_argument("--tournament", default="T20 World Cup 2024", help="Tournament filter")
+    report_parser.add_argument("--tournament", default="ICC Men's T20 World Cup", help="Tournament filter")
     report_parser.add_argument("--entity", default=None, help="Optional entity ID or name for deep evidence trace")
 
     subparsers.add_parser("analytics-validate", help="Validate structural invariants across Phase 6A tables")
