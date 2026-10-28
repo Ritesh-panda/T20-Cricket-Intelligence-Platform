@@ -45,41 +45,41 @@ The platform introduces the **Attention-to-Performance Discrepancy Index (APDI)*
 ```mermaid
 flowchart TD
     subgraph S01["01. Open Data Sources"]
-        CS["Cricsheet Open Data\n(Ball-by-Ball JSON / ODC-By 1.0)"]
-        WM["Wikimedia Foundation\n(Editorial Tournament Reports / CC BY-SA 4.0)"]
-        SQUAD["Official Squad Rosters\n(Player Profiles, Bat/Bowl Styles)"]
+        CS["Cricsheet Open Data<br/>(Ball-by-Ball JSON / ODC-By 1.0)"]
+        WM["Wikimedia Foundation<br/>(Editorial Tournament Reports / CC BY-SA 4.0)"]
+        SQUAD["Official Squad Rosters<br/>(Player Profiles, Bat/Bowl Styles)"]
     end
 
-    subgraph S02["02. Ingestion & Validation Engine"]
-        AD_C["Cricsheet Adapter\n(10 Fixtures, 2,314 Deliveries)"]
-        AD_N["Wikimedia Adapter\n(Trafilatura HTML Extractor)"]
-        SHA["Provenance Auditor\n(SHA-256 Content Hashing & Deduplication)"]
-        VAL["Pydantic v2 Schema Gate\n(Zero Missing/Fabricated Invariants)"]
+    subgraph S02["02. Ingestion and Validation Engine"]
+        AD_C["Cricsheet Adapter<br/>(10 Fixtures, 2,314 Deliveries)"]
+        AD_N["Wikimedia Adapter<br/>(Trafilatura HTML Extractor)"]
+        SHA["Provenance Auditor<br/>(SHA-256 Content Hashing and Deduplication)"]
+        VAL["Pydantic v2 Schema Gate<br/>(Zero Missing/Fabricated Invariants)"]
     end
 
     subgraph S03["03. Canonical Storage Layer"]
-        DB[("SQLite 3 Database\n(data/cricket_intel.db, WAL Mode, Schema v5)")]
-        PROV[("Provenance & Ingestion Log\n(source_records, ingestion_runs)")]
+        DB["SQLite 3 Database<br/>(data/cricket_intel.db, WAL Mode, Schema v5)"]
+        PROV["Provenance and Ingestion Log<br/>(source_records, ingestion_runs)"]
     end
 
-    subgraph S04["04. Cricket NLP & Sentiment Engine"]
-        TOK["Cricket Regex Tokenizer\n(Overs 19.4, Scores 176/7, Acronyms)"]
-        GAZ["Gazetteer Boundary Matcher\n(Longest-Phrase Priority)"]
-        ER["Cross-Entity Linker & Alias Resolver\n(Cricsheet IDs ↔ Gazetteer Slugs)"]
-        SENT["Aspect-Based Sentiment Engine\n(Batter vs Bowler Framing Rules)"]
-        CLUST["Topic Clustering Engine\n(Sentence-Transformers + KMeans k=3)"]
+    subgraph S04["04. Cricket NLP and Sentiment Engine"]
+        TOK["Cricket Regex Tokenizer<br/>(Overs 19.4, Scores 176/7, Acronyms)"]
+        GAZ["Gazetteer Boundary Matcher<br/>(Longest-Phrase Priority)"]
+        ER["Cross-Entity Linker and Alias Resolver<br/>(Cricsheet IDs to Gazetteer Slugs)"]
+        SENT["Aspect-Based Sentiment Engine<br/>(Batter vs Bowler Framing Rules)"]
+        CLUST["Topic Clustering Engine<br/>(Sentence-Transformers + KMeans k=3)"]
     end
 
-    subgraph S05["06. Analytics & Discrepancy Engine (APDI)"]
-        PERF["Performance Calculator\n(Runs, SR, Wickets, Economy, Phases)"]
-        ATTN["Attention Calculator\n(Mentions, Reach, Publisher Diversity, Prominence)"]
-        GATE["Minimum Cohort & Sample Gate\n(Strict NULL for Insufficient Data)"]
-        APDI["APDI Formulation Engine\n(NormAttention - NormPerformance)"]
+    subgraph S05["05. Analytics and Discrepancy Engine (APDI)"]
+        PERF["Performance Calculator<br/>(Runs, SR, Wickets, Economy, Phases)"]
+        ATTN["Attention Calculator<br/>(Mentions, Reach, Publisher Diversity, Prominence)"]
+        GATE["Minimum Cohort and Sample Gate<br/>(Strict NULL for Insufficient Data)"]
+        APDI["APDI Formulation Engine<br/>(NormAttention - NormPerformance)"]
     end
 
-    subgraph S06["07. Serving & Presentation Layer"]
-        API["FastAPI REST Backend (:8000)\n(OpenAPI Docs, Pagination, Health Probes)"]
-        UI["React 18 + Vite Dashboard (:5173)\n(APDI Explorer, Scorecards, Player Profiles)"]
+    subgraph S06["06. Serving and Presentation Layer"]
+        API["FastAPI REST Backend - Port 8000<br/>(OpenAPI Docs, Pagination, Health Probes)"]
+        UI["React 18 + Vite Dashboard - Port 5173<br/>(APDI Explorer, Scorecards, Player Profiles)"]
     end
 
     CS --> AD_C --> SHA --> VAL --> DB
@@ -114,12 +114,12 @@ sequenceDiagram
     participant DB as SQLite Storage Manager (WAL)
     participant RUN as Ingestion Run Auditor
 
-    INGEST->>SRC: Discover & Fetch Raw Asset (JSON / HTML)
+    INGEST->>SRC: Discover and Fetch Raw Asset (JSON / HTML)
     SRC-->>INGEST: Raw Response Payload
     INGEST->>SHA: Compute SHA-256 Hash of Raw Content
     SHA->>DB: Check if Content Hash Exists (source_records)
     alt Hash Already Present (Idempotent Skip)
-        DB-->>INGEST: Duplicate Detected -> Log SKIPPED
+        DB-->>INGEST: Duplicate Detected - Log SKIPPED
     else Fresh or Updated Content
         INGEST->>SCHEMA: Validate Payload Against Canonical Schema
         SCHEMA-->>INGEST: Validated Domain Objects
@@ -138,19 +138,19 @@ The platform utilizes a cricket-specialized Natural Language Processing pipeline
 
 ```mermaid
 flowchart LR
-    RAW["Raw Editorial Text\n(HTML / RSS Articles)"] --> CLEAN["Text Cleaner\n• HTML Unescape\n• Boilerplate Strip\n• Unicode Normalization"]
+    RAW["Raw Editorial Text<br/>(HTML / RSS Articles)"] --> CLEAN["Text Cleaner<br/>- HTML Unescape<br/>- Boilerplate Strip<br/>- Unicode Normalization"]
     
-    CLEAN --> TOK["Cricket Tokenizer\n• Overs (19.4)\n• Scores (176/7)\n• Acronyms (IND, SA)"]
+    CLEAN --> TOK["Cricket Tokenizer<br/>- Overs (19.4)<br/>- Scores (176/7)<br/>- Acronyms (IND, SA)"]
     
-    TOK --> GAZ["Gazetteer Matcher\n• Boundary Anchoring\n• Longest-Phrase Priority\n• Substring Guard"]
+    TOK --> GAZ["Gazetteer Matcher<br/>- Boundary Anchoring<br/>- Longest-Phrase Priority<br/>- Substring Guard"]
     
-    GAZ --> ER["Entity Disambiguator\n• Context Linker\n• Alias Canonicalization\n• Ambiguity Flagging"]
+    GAZ --> ER["Entity Disambiguator<br/>- Context Linker<br/>- Alias Canonicalization<br/>- Ambiguity Flagging"]
     
-    ER --> MENT[("entity_mentions\n(Resolved IDs,\nCharacter Spans)")]
+    ER --> MENT["entity_mentions<br/>(Resolved IDs, Character Spans)"]
     
-    MENT --> SENT["Aspect Sentiment Engine\n• Negation Windowing\n• Batter vs Bowler Context\n• Domain Lexicons"]
+    MENT --> SENT["Aspect Sentiment Engine<br/>- Negation Windowing<br/>- Batter vs Bowler Context<br/>- Domain Lexicons"]
     
-    SENT --> FRAME[("sentiment_baselines\n(Framing Scores,\nPublisher Breakdown)")]
+    SENT --> FRAME["sentiment_baselines<br/>(Framing Scores, Publisher Breakdown)"]
 ```
 
 ---
@@ -162,33 +162,33 @@ The APDI formula mathematically measures divergence between editorial media atte
 ```mermaid
 flowchart TD
     subgraph PerfTrack["Objective Match Performance"]
-        DELIV[("Ball-by-Ball Deliveries\n(2,314 Records)")] --> CALC_P["Compute Raw Performance Composite\n• Batting: Runs, Strike Rate, 4s, 6s, Average\n• Bowling: Economy, Wickets, Maidens, Strike Rate\n• Team: Win %, Run Rate, Margin"]
-        CALC_P --> COHORT_P["Partition into Role Cohorts\n(Batters / Bowlers / Teams)"]
-        COHORT_P --> RANK_P["Compute Percentile Rank\nNormPerf = Rank / (N - 1) ∈ [0.0, 1.0]"]
+        DELIV["Ball-by-Ball Deliveries<br/>(2,314 Records)"] --> CALC_P["Compute Raw Performance Composite<br/>- Batting: Runs, Strike Rate, 4s, 6s, Average<br/>- Bowling: Economy, Wickets, Maidens, Strike Rate<br/>- Team: Win %, Run Rate, Margin"]
+        CALC_P --> COHORT_P["Partition into Role Cohorts<br/>(Batters / Bowlers / Teams)"]
+        COHORT_P --> RANK_P["Compute Percentile Rank<br/>NormPerf = Rank / (N - 1) in [0.0, 1.0]"]
     end
 
     subgraph AttnTrack["Editorial Media Visibility"]
-        TEXT[("Editorial Corpus\n(Articles & Paragraphs)")] --> CALC_A["Compute Raw Media Attention Composite\n• Mention Volume (Paragraphs vs Raw)\n• Article Reach & Publisher Diversity\n• Position Prominence (Headline=3.0, Lead=1.5, Body=1.0)"]
-        CALC_A --> COHORT_A["Partition into Role Cohorts\n(Batters / Bowlers / Teams)"]
-        COHORT_A --> RANK_A["Compute Percentile Rank\nNormAttn = Rank / (N - 1) ∈ [0.0, 1.0]"]
+        TEXT["Editorial Corpus<br/>(Articles and Paragraphs)"] --> CALC_A["Compute Raw Media Attention Composite<br/>- Mention Volume (Paragraphs vs Raw)<br/>- Article Reach and Publisher Diversity<br/>- Position Prominence (Headline=3.0, Lead=1.5, Body=1.0)"]
+        CALC_A --> COHORT_A["Partition into Role Cohorts<br/>(Batters / Bowlers / Teams)"]
+        COHORT_A --> RANK_A["Compute Percentile Rank<br/>NormAttn = Rank / (N - 1) in [0.0, 1.0]"]
     end
 
-    subgraph QualityGate["Evidence Sufficiency & Eligibility Gate"]
-        SAMPLE{"Sufficient Sample Size?\n• Cohort Size N ≥ 5\n• Batter Balls ≥ 10\n• Bowler Overs ≥ 2.0\n• Team Matches ≥ 1"}
+    subgraph QualityGate["Evidence Sufficiency and Eligibility Gate"]
+        SAMPLE["Sufficient Sample Size?<br/>- Cohort Size N >= 5<br/>- Batter Balls >= 10<br/>- Bowler Overs >= 2.0<br/>- Team Matches >= 1"]
     end
 
     RANK_P --> SAMPLE
     RANK_A --> SAMPLE
 
-    SAMPLE -- "NO" --> INSUF["INSUFFICIENT_DATA\n• APDI = NULL (Strict Zero-Fabrication)\n• Category = INSUFFICIENT_DATA\n• Retain Sample Indicators & Warnings"]
-    SAMPLE -- "YES" --> FORMULA["APDI Formulation\nAPDI = NormAttn - NormPerf ∈ [-1.0, +1.0]"]
+    SAMPLE -->|No: Below Threshold| INSUF["INSUFFICIENT_DATA<br/>- APDI = NULL (Strict Zero-Fabrication)<br/>- Category = INSUFFICIENT_DATA<br/>- Retain Sample Indicators and Warnings"]
+    SAMPLE -->|Yes: Meets Threshold| FORMULA["APDI Formulation<br/>APDI = NormAttn - NormPerf in [-1.0, +1.0]"]
 
-    FORMULA --> CLASSIFY{"Discrepancy Category Threshold\n(Threshold = 0.20)"}
-    CLASSIFY -- "APDI > +0.20" --> OVER["OVER_ATTENDED\n(Attention outstrips performance)"]
-    CLASSIFY -- "APDI < -0.20" --> UNDER["UNDER_ATTENDED\n(Performance outstrips attention)"]
-    CLASSIFY -- "-0.20 ≤ APDI ≤ +0.20" --> BAL["BALANCED\n(Attention aligns with performance)"]
+    FORMULA --> CLASSIFY["Discrepancy Category Threshold<br/>(Threshold = 0.20)"]
+    CLASSIFY -->|APDI above +0.20| OVER["OVER_ATTENDED<br/>(Attention outstrips performance)"]
+    CLASSIFY -->|APDI below -0.20| UNDER["UNDER_ATTENDED<br/>(Performance outstrips attention)"]
+    CLASSIFY -->|APDI between -0.20 and +0.20| BAL["BALANCED<br/>(Attention aligns with performance)"]
 
-    INSUF --> PERSIST[("Persist to apdi_records Table")]
+    INSUF --> PERSIST["Persist to apdi_records Table"]
     OVER --> PERSIST
     UNDER --> PERSIST
     BAL --> PERSIST
@@ -202,146 +202,146 @@ The underlying SQLite database (`data/cricket_intel.db`, Schema Version 5) stric
 
 ```mermaid
 erDiagram
-    teams ||--o{ matches : "team1_id / team2_id"
-    teams ||--o{ players : "primary_team_id"
-    matches ||--o{ deliveries : "match_id"
-    players ||--o{ deliveries : "batter_id / bowler_id"
-    source_records ||--o{ matches : "provenance_id"
-    source_records ||--o{ articles : "provenance_id"
-    articles ||--o{ article_paragraphs : "article_id"
-    article_paragraphs ||--o{ entity_mentions : "paragraph_id"
-    players ||--o{ performance_metrics : "entity_id"
-    players ||--o{ attention_metrics : "entity_id"
-    players ||--o{ apdi_records : "entity_id"
-    analytics_runs ||--o{ apdi_records : "run_id"
+    TEAMS ||--o{ MATCHES : plays
+    TEAMS ||--o{ PLAYERS : rosters
+    MATCHES ||--o{ DELIVERIES : contains
+    PLAYERS ||--o{ DELIVERIES : participates
+    SOURCE_RECORDS ||--o{ MATCHES : verifies
+    SOURCE_RECORDS ||--o{ ARTICLES : verifies
+    ARTICLES ||--o{ ARTICLE_PARAGRAPHS : contains
+    ARTICLE_PARAGRAPHS ||--o{ ENTITY_MENTIONS : mentions
+    PLAYERS ||--o{ PERFORMANCE_METRICS : evaluates
+    PLAYERS ||--o{ ATTENTION_METRICS : measures
+    PLAYERS ||--o{ APDI_RECORDS : scores
+    ANALYTICS_RUNS ||--o{ APDI_RECORDS : generates
 
-    matches {
-        text match_id PK
-        text tournament
-        text match_date
-        text venue
-        text team1_id FK
-        text team2_id FK
-        text winner_id
-        text provenance_id FK
+    MATCHES {
+        string match_id PK
+        string tournament
+        string match_date
+        string venue
+        string team1_id FK
+        string team2_id FK
+        string winner_id
+        string provenance_id FK
     }
 
-    deliveries {
-        text delivery_id PK
-        text match_id FK
-        integer innings
-        integer over_num
-        integer ball_num
-        text batter_id FK
-        text bowler_id FK
-        integer batter_runs
-        integer extra_runs
-        integer total_runs
+    DELIVERIES {
+        string delivery_id PK
+        string match_id FK
+        int innings
+        int over_num
+        int ball_num
+        string batter_id FK
+        string bowler_id FK
+        int batter_runs
+        int extra_runs
+        int total_runs
         boolean is_wicket
-        text wicket_kind
-        text phase
+        string wicket_kind
+        string phase
     }
 
-    players {
-        text player_id PK
-        text full_name
-        text cricsheet_id
-        text primary_team_id FK
-        text batting_style
-        text bowling_style
-        text aliases_json
+    PLAYERS {
+        string player_id PK
+        string full_name
+        string cricsheet_id
+        string primary_team_id FK
+        string batting_style
+        string bowling_style
+        string aliases_json
     }
 
-    teams {
-        text team_id PK
-        text name
-        text code
-        text aliases_json
+    TEAMS {
+        string team_id PK
+        string name
+        string code
+        string aliases_json
     }
 
-    source_records {
-        text provenance_id PK
-        text source_name
-        text source_url
-        text content_hash_sha256
-        text license_tag
+    SOURCE_RECORDS {
+        string provenance_id PK
+        string source_name
+        string source_url
+        string content_hash_sha256
+        string license_tag
         boolean redistributable
     }
 
-    articles {
-        text article_id PK
-        text title
-        text url
-        text source_domain
-        text published_date
-        text provenance_id FK
+    ARTICLES {
+        string article_id PK
+        string title
+        string url
+        string source_domain
+        string published_date
+        string provenance_id FK
     }
 
-    article_paragraphs {
-        text paragraph_id PK
-        text article_id FK
-        integer paragraph_index
-        text text
-        text section_type
+    ARTICLE_PARAGRAPHS {
+        string paragraph_id PK
+        string article_id FK
+        int paragraph_index
+        string text
+        string section_type
     }
 
-    entity_mentions {
-        text mention_id PK
-        text paragraph_id FK
-        text surface_text
-        text entity_type
-        text resolved_id
-        text resolution_status
+    ENTITY_MENTIONS {
+        string mention_id PK
+        string paragraph_id FK
+        string surface_text
+        string entity_type
+        string resolved_id
+        string resolution_status
     }
 
-    performance_metrics {
-        text metric_id PK
-        text entity_id FK
-        text role
-        text tournament
-        integer matches_played
-        integer runs_scored
-        real strike_rate
-        integer wickets_taken
-        real bowling_economy
-        real raw_performance_composite
+    PERFORMANCE_METRICS {
+        string metric_id PK
+        string entity_id FK
+        string role
+        string tournament
+        int matches_played
+        int runs_scored
+        float strike_rate
+        int wickets_taken
+        float bowling_economy
+        float raw_performance_composite
     }
 
-    attention_metrics {
-        text metric_id PK
-        text entity_id FK
-        text tournament
-        integer paragraph_count
-        integer raw_mention_count
-        integer article_reach
-        integer source_diversity_count
-        real prominence_score
-        real raw_attention_composite
+    ATTENTION_METRICS {
+        string metric_id PK
+        string entity_id FK
+        string tournament
+        int paragraph_count
+        int raw_mention_count
+        int article_reach
+        int source_diversity_count
+        float prominence_score
+        float raw_attention_composite
     }
 
-    apdi_records {
-        text record_id PK
-        text run_id FK
-        text entity_id FK
-        text entity_name
-        text role_cohort
-        real raw_attention_score
-        real normalized_attention_score
-        real raw_performance_score
-        real normalized_performance_score
-        real apdi_value
-        text discrepancy_category
-        text evidence_sufficiency_status
+    APDI_RECORDS {
+        string record_id PK
+        string run_id FK
+        string entity_id FK
+        string entity_name
+        string role_cohort
+        float raw_attention_score
+        float normalized_attention_score
+        float raw_performance_score
+        float normalized_performance_score
+        float apdi_value
+        string discrepancy_category
+        string evidence_sufficiency_status
     }
 
-    analytics_runs {
-        text run_id PK
-        text tournament
-        text status
-        integer entities_processed
-        integer valid_apdi_count
-        integer insufficient_data_count
-        text completed_at_utc
+    ANALYTICS_RUNS {
+        string run_id PK
+        string tournament
+        string status
+        int entities_processed
+        int valid_apdi_count
+        int insufficient_data_count
+        string completed_at_utc
     }
 ```
 
@@ -353,18 +353,18 @@ The platform provides a dual-surface architecture: a high-throughput FastAPI RES
 
 ```mermaid
 flowchart TB
-    subgraph Browser["User Browser (:5173)"]
-        SHELL["App Shell & Navigation Sidebar\n(Header, Theme Toggle, Active Tournament Scope)"]
+    subgraph Browser["User Browser - Port 5173"]
+        SHELL["App Shell and Navigation Sidebar<br/>(Header, Theme Toggle, Active Tournament Scope)"]
         
         subgraph Views["Dashboard Application Views"]
-            V1["Overview Dashboard\n(KPI Cards, Pipeline Status, Attention BarCharts, Health)"]
-            V2["Matches Explorer & Scorecard\n(Fixture List, Innings Aggregates, Batting & Bowling Scorecards)"]
-            V3["Player Directory & Research Profile\n(Interactive Table, Full Names, Bat/Bowl Styles, Rich Profile)"]
-            V4["APDI Discrepancy Explorer\n(Mathematical Matrix, Cohort Filters, Discrepancy Badges)"]
-            V5["Media Intelligence & Articles\n(Editorial Harvest Corpus, Paragraph Splitter, Entity Offsets)"]
-            V6["Topics & Narratives\n(KMeans Cluster Clouds, Dominant Themes, Keyword Distributions)"]
-            V7["System Health & Observability\n(4-Tier Audit: Liveness, Storage, Corpus, APDI Invariants)"]
-            V8["Provenance & Data Sources\n(Immutable SHA-256 Catalog, Ingestion Audit Runs, Licensure)"]
+            V1["Overview Dashboard<br/>(KPI Cards, Pipeline Status, Attention BarCharts, Health)"]
+            V2["Matches Explorer and Scorecard<br/>(Fixture List, Innings Aggregates, Batting and Bowling Scorecards)"]
+            V3["Player Directory and Research Profile<br/>(Interactive Table, Full Names, Bat/Bowl Styles, Rich Profile)"]
+            V4["APDI Discrepancy Explorer<br/>(Mathematical Matrix, Cohort Filters, Discrepancy Badges)"]
+            V5["Media Intelligence and Articles<br/>(Editorial Harvest Corpus, Paragraph Splitter, Entity Offsets)"]
+            V6["Topics and Narratives<br/>(KMeans Cluster Clouds, Dominant Themes, Keyword Distributions)"]
+            V7["System Health and Observability<br/>(4-Tier Audit: Liveness, Storage, Corpus, APDI Invariants)"]
+            V8["Provenance and Data Sources<br/>(Immutable SHA-256 Catalog, Ingestion Audit Runs, Licensure)"]
         end
 
         SHELL --> V1
@@ -377,27 +377,27 @@ flowchart TB
         SHELL --> V8
     end
 
-    subgraph ClientLib["Frontend API Client (frontend/src/lib/api.ts)"]
-        RQ["TanStack React Query\n(Caching, Invalidation, Error Boundaries)"]
-        AXIOS["Axios HTTP Client\n(Base URL: http://127.0.0.1:8000, 15s Timeout)"]
+    subgraph ClientLib["Frontend API Client"]
+        RQ["TanStack React Query<br/>(Caching, Invalidation, Error Boundaries)"]
+        AXIOS["Axios HTTP Client<br/>(Base URL: http://127.0.0.1:8000)"]
         RQ --> AXIOS
     end
 
     Views --> RQ
 
-    subgraph BackendAPI["FastAPI REST Application (src/api/main.py :8000)"]
-        CORS["CORS Middleware\n(Strict Origin Whitelist)"]
-        LIFE["Lifespan Context Manager\n(SQLite Persistence Binding)"]
-        ERR["Standardized Error Handlers\n(400, 404, 422, 500 JSON Envelopes)"]
+    subgraph BackendAPI["FastAPI REST Application - Port 8000"]
+        CORS["CORS Middleware<br/>(Strict Origin Whitelist)"]
+        LIFE["Lifespan Context Manager<br/>(SQLite Persistence Binding)"]
+        ERR["Standardized Error Handlers<br/>(400, 404, 422, 500 JSON Envelopes)"]
         
         subgraph Routers["API v1 Route Controllers"]
-            R_HEALTH["/health & /ready"]
-            R_MATCH["/api/v1/matches & /performance"]
-            R_PLAY["/api/v1/players & /api/v1/teams"]
-            R_ART["/api/v1/articles & /paragraphs"]
-            R_NLP["/api/v1/topics & /entities"]
-            R_ANLY["/api/v1/analytics/overview & /attention & /performance & /apdi"]
-            R_OBS["/api/v1/observability/pipeline-stats & /sources & /analytics-runs"]
+            R_HEALTH["Health and Readiness Endpoints"]
+            R_MATCH["Matches and Performance Endpoints"]
+            R_PLAY["Players and Teams Endpoints"]
+            R_ART["Articles and Paragraphs Endpoints"]
+            R_NLP["Topics and Entities Endpoints"]
+            R_ANLY["Analytics and APDI Endpoints"]
+            R_OBS["Observability and Sources Endpoints"]
         end
 
         CORS --> Routers
@@ -416,15 +416,15 @@ The platform provides a modular CLI interface (`python -m src.pipeline.cli`) cap
 
 ```mermaid
 flowchart TD
-    START(["Run: python -m src.pipeline.cli run"]) --> STEP1["1. Ingestion & Adapters\n• Ingest Cricsheet Matches & Deliveries\n• Ingest Editorial Tournament Articles"]
-    STEP1 --> STEP2["2. Text Processing & NLP\n• Extract Paragraphs & Strip Boilerplate\n• Cricket Tokenization & Entity Extraction\n• Aspect-Based Sentiment Framing"]
-    STEP2 --> STEP3["3. Topic Clustering\n• Dense Sentence Embeddings\n• KMeans Topic Clustering (k=3)"]
-    STEP3 --> STEP4["4. Objective Performance\n• Aggregate Deliveries by Batter, Bowler, Team\n• Compute Raw Performance Composites"]
-    STEP4 --> STEP5["5. Media Attention Calculation\n• Aggregate Mentions, Reach, Prominence\n• Compute Raw Attention Composites"]
-    STEP5 --> STEP6["6. APDI Calculation Engine\n• Resolve Cross-Entity Aliases\n• Evaluate Minimum Sample Gates\n• Compute APDI & Classify Discrepancy"]
-    STEP6 --> STEP7["7. Player Metadata Enrichment\n• Align Full Names, Batting & Bowling Styles"]
-    STEP7 --> STEP8["8. Analytical Summary Report\n• Display Final Terminal Metrics & Invariant Checks"]
-    STEP8 --> END(["Pipeline Completed Successfully [Zero Errors]"])
+    START(["Run: python -m src.pipeline.cli run"]) --> STEP1["1. Ingestion and Adapters<br/>- Ingest Cricsheet Matches and Deliveries<br/>- Ingest Editorial Tournament Articles"]
+    STEP1 --> STEP2["2. Text Processing and NLP<br/>- Extract Paragraphs and Strip Boilerplate<br/>- Cricket Tokenization and Entity Extraction<br/>- Aspect-Based Sentiment Framing"]
+    STEP2 --> STEP3["3. Topic Clustering<br/>- Dense Sentence Embeddings<br/>- KMeans Topic Clustering k=3"]
+    STEP3 --> STEP4["4. Objective Performance<br/>- Aggregate Deliveries by Batter, Bowler, Team<br/>- Compute Raw Performance Composites"]
+    STEP4 --> STEP5["5. Media Attention Calculation<br/>- Aggregate Mentions, Reach, Prominence<br/>- Compute Raw Attention Composites"]
+    STEP5 --> STEP6["6. APDI Calculation Engine<br/>- Resolve Cross-Entity Aliases<br/>- Evaluate Minimum Sample Gates<br/>- Compute APDI and Classify Discrepancy"]
+    STEP6 --> STEP7["7. Player Metadata Enrichment<br/>- Align Full Names, Batting and Bowling Styles"]
+    STEP7 --> STEP8["8. Analytical Summary Report<br/>- Display Final Terminal Metrics and Invariant Checks"]
+    STEP8 --> END(["Pipeline Completed Successfully"])
 ```
 
 ---
