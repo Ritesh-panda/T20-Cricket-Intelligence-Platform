@@ -1091,6 +1091,8 @@ def compute_apdi_cmd(args: argparse.Namespace) -> int:
     print("=" * 105)
 
     if not args.dry_run:
+        with storage._get_connection() as conn:
+            conn.execute("DELETE FROM apdi_records WHERE tournament = ?;", (args.tournament,))
         storage.save_apdi_records(all_apdi_records)
         run_rec = AnalyticsRunRecord(
             run_id=run_id,
