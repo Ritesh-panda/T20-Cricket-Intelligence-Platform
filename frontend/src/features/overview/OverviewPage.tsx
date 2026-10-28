@@ -297,34 +297,50 @@ export const OverviewPage: React.FC = () => {
             <CardContent className="p-5 space-y-4">
               {/* Apple Segmented Proportional Bar */}
               <div className="space-y-1.5">
-                <div className="h-3.5 w-full rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-0.5 flex overflow-hidden gap-1">
-                  <div
-                    style={{ width: '12%' }}
-                    className="h-full rounded-full bg-[#FF9500] transition-all"
-                    title="Over-Attended: 3 entities"
-                  />
-                  <div
-                    style={{ width: '12%' }}
-                    className="h-full rounded-full bg-[#5856D6] transition-all"
-                    title="Under-Attended: 3 entities"
-                  />
-                  <div
-                    style={{ width: '22%' }}
-                    className="h-full rounded-full bg-[#34C759] transition-all"
-                    title="Balanced: 7 entities"
-                  />
-                  <div
-                    style={{ width: '54%' }}
-                    className="h-full rounded-full bg-slate-300 dark:bg-slate-700 transition-all"
-                    title="Insufficient Data: 103 entities"
-                  />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 px-1 font-mono">
-                  <span>Over (3)</span>
-                  <span>Under (3)</span>
-                  <span>Balanced (7)</span>
-                  <span>Guardrail Safeguard (103)</span>
-                </div>
+                {(() => {
+                  const overCount = overview?.over_attended_count ?? 30;
+                  const underCount = overview?.under_attended_count ?? 29;
+                  const balCount = overview?.balanced_count ?? 33;
+                  const guardCount = overview?.insufficient_data_count ?? 24;
+                  const total = Math.max(1, overCount + underCount + balCount + guardCount);
+                  const pOver = Math.round((overCount / total) * 100);
+                  const pUnder = Math.round((underCount / total) * 100);
+                  const pBal = Math.round((balCount / total) * 100);
+                  const pGuard = Math.max(0, 100 - pOver - pUnder - pBal);
+
+                  return (
+                    <>
+                      <div className="h-3.5 w-full rounded-full bg-black/[0.04] dark:bg-white/[0.06] p-0.5 flex overflow-hidden gap-1">
+                        <div
+                          style={{ width: `${pOver}%` }}
+                          className="h-full rounded-full bg-[#FF9500] transition-all"
+                          title={`Over-Attended: ${overCount} entities`}
+                        />
+                        <div
+                          style={{ width: `${pUnder}%` }}
+                          className="h-full rounded-full bg-[#5856D6] transition-all"
+                          title={`Under-Attended: ${underCount} entities`}
+                        />
+                        <div
+                          style={{ width: `${pBal}%` }}
+                          className="h-full rounded-full bg-[#34C759] transition-all"
+                          title={`Balanced: ${balCount} entities`}
+                        />
+                        <div
+                          style={{ width: `${pGuard}%` }}
+                          className="h-full rounded-full bg-slate-300 dark:bg-slate-700 transition-all"
+                          title={`Insufficient Data: ${guardCount} entities`}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-slate-400 px-1 font-mono">
+                        <span>Over ({overCount})</span>
+                        <span>Under ({underCount})</span>
+                        <span>Balanced ({balCount})</span>
+                        <span>Safeguard ({guardCount})</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {/* Category Breakdown Rows */}

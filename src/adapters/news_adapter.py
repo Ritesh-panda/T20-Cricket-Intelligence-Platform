@@ -101,7 +101,7 @@ class NewsArticleAdapter(BaseSourceAdapter):
         extracted_text = trafilatura.extract(
             html_text,
             include_comments=False,
-            include_tables=False,
+            include_tables=True,
             no_fallback=False,
             output_format="txt",
         )
