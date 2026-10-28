@@ -57,29 +57,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-white/75 dark:bg-[#12141A]/80 backdrop-blur-2xl border-r border-black/[0.06] dark:border-white/[0.08] text-slate-800 dark:text-slate-200 select-none transition-all duration-200">
-      {/* macOS Window Controls & Brand Header */}
+      {/* Apple Studio Brand Header */}
       <div className="h-16 flex items-center justify-between px-4 border-b border-black/[0.05] dark:border-white/[0.08]">
         <div className="flex items-center gap-3 overflow-hidden">
-          {/* Traffic light window controls imitation */}
-          {!collapsed && (
-            <div className="hidden sm:flex items-center gap-1.5 mr-1 shrink-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] border border-[#E0443E]/50 shadow-xs inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] border border-[#DEA123]/50 shadow-xs inline-block" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F] border border-[#1AAB29]/50 shadow-xs inline-block" />
-            </div>
-          )}
-
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#007AFF] via-[#5856D6] to-[#AF52DE] flex items-center justify-center text-white font-bold shadow-sm shadow-[#007AFF]/25 shrink-0">
-            <span className="text-xs font-mono font-bold tracking-tighter">T20</span>
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white font-bold shadow-sm shadow-[#007AFF]/25 shrink-0">
+            <span className="text-[11px] font-bold tracking-tight">T20</span>
           </div>
 
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-xs sm:text-sm font-semibold tracking-tight truncate text-slate-900 dark:text-white">
-                Cricket Intel
+              <span className="text-[13px] font-semibold tracking-tight truncate text-slate-900 dark:text-white">
+                Cricket Intelligence
               </span>
-              <span className="text-[10px] font-mono text-[#007AFF] dark:text-[#0A84FF] font-medium tracking-wide uppercase truncate">
-                Research Studio
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-wider uppercase truncate">
+                APDI Research Studio
               </span>
             </div>
           )}
@@ -114,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     clsx(
                       'flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs sm:text-[13px] font-medium transition-all duration-150 group relative tracking-tight',
                       isActive
-                        ? 'bg-[#007AFF]/12 text-[#007AFF] dark:bg-[#0A84FF]/18 dark:text-[#0A84FF] font-semibold shadow-xs'
+                        ? 'bg-[#007AFF] text-white font-medium shadow-xs'
                         : 'text-slate-600 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] hover:text-slate-900 dark:hover:text-white'
                     )
                   }
@@ -124,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <div
                         className={clsx(
                           'w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-transform duration-150 group-hover:scale-105',
-                          isActive ? 'bg-[#007AFF] text-white shadow-xs' : item.color
+                          isActive ? 'bg-white/20 text-white' : item.color
                         )}
                       >
                         <item.icon className="w-3.5 h-3.5" />
@@ -135,7 +126,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       )}
 
                       {item.highlight && !collapsed && (
-                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-[#AF52DE]/15 text-[#AF52DE] dark:text-[#BF5AF2] border border-[#AF52DE]/25 shrink-0">
+                        <span
+                          className={clsx(
+                            'text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full shrink-0 border',
+                            isActive
+                              ? 'bg-white/20 text-white border-white/30'
+                              : 'bg-[#AF52DE]/15 text-[#AF52DE] dark:text-[#BF5AF2] border-[#AF52DE]/25'
+                          )}
+                        >
                           Core
                         </span>
                       )}
@@ -151,10 +149,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Bottom Status Pill & Collapse Toggle */}
       <div className="p-3 border-t border-black/[0.05] dark:border-white/[0.08] flex items-center justify-between text-xs text-slate-400">
         {!collapsed && (
-          <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-black/[0.03] dark:bg-white/[0.04]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] animate-pulse" />
-            <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-              macOS HIG • v1.0
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] max-w-[190px]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#34C759] shrink-0" />
+            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400 truncate">
+              ICC T20 WC '24 • Verified
             </span>
           </div>
         )}

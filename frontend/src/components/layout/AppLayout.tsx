@@ -33,12 +33,8 @@ export const AppLayout: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen bg-[#F5F5F7] dark:bg-[#0B0D11] text-slate-900 dark:text-slate-100 font-sans transition-colors selection:bg-[#007AFF]/20 selection:text-[#007AFF]">
-      {/* Apple Ambient Atmospheric Glows */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#007AFF]/10 to-[#5856D6]/5 dark:from-[#007AFF]/15 dark:to-[#5856D6]/10 blur-3xl" />
-        <div className="absolute top-[40%] -left-[10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-[#34C759]/5 to-[#007AFF]/5 dark:from-[#34C759]/10 dark:to-[#007AFF]/5 blur-3xl" />
-      </div>
+    <div className="relative flex min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors selection:bg-[#007AFF]/20 selection:text-[#007AFF]">
+
 
       <Sidebar
         collapsed={collapsed}

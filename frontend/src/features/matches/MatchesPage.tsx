@@ -271,9 +271,36 @@ export const MatchesPage: React.FC = () => {
 
               <CardContent className="pt-4 space-y-4">
                 {!selectedMatchId ? (
-                  <div className="py-16 text-center text-xs text-slate-400 dark:text-slate-500">
-                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
-                    Select "Scorecard" on any fixture to calculate complete batting and bowling breakdowns.
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white mb-1">
+                        <Activity className="w-4 h-4 text-[#007AFF]" />
+                        <span>Featured Tournament Fixtures</span>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Select a key World Cup fixture below to inspect the delivery-reconciled scorecard and batting/bowling splits:
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {matchesData?.items.slice(0, 3).map((m) => (
+                        <button
+                          key={m.match_id}
+                          onClick={() => setSelectedMatchId(m.match_id)}
+                          className="w-full p-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.07] hover:border-[#007AFF]/40 dark:hover:border-[#007AFF]/40 hover:shadow-sm flex items-center justify-between text-left transition-all duration-150 group"
+                        >
+                          <div>
+                            <div className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[#007AFF] transition-colors">
+                              {m.team1_id} vs {m.team2_id}
+                            </div>
+                            <div className="text-[10px] text-slate-400 mt-0.5">
+                              {m.match_date} • {m.venue || 'T20 Stadium'}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[#007AFF] group-hover:translate-x-0.5 transition-all" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : isScorecardLoading ? (
                   <div className="space-y-3 py-6">

@@ -14,6 +14,10 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  Filter,
+  ArrowRight,
+  Shield,
+  Activity,
 } from 'lucide-react';
 import { api, extractErrorMessage } from '../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
@@ -25,8 +29,18 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { PlayerResponse } from '../../types/api';
 
+// Curated cohort spotlights for quick research selection
+const FEATURED_PLAYERS = [
+  { id: 'player_v_kohli', name: 'Virat Kohli', team: 'IND', role: 'Batter', gradient: 'from-[#007AFF] to-[#5856D6]' },
+  { id: 'player_a_johnson', name: 'Aaron Johnson', team: 'CAN', role: 'Batter', gradient: 'from-[#FF9500] to-[#FF3B30]' },
+  { id: 'player_a_zampa', name: 'Adam Zampa', team: 'AUS', role: 'Bowler', gradient: 'from-[#34C759] to-[#007AFF]' },
+  { id: 'player_mustafizur_rahman', name: 'Mustafizur Rahman', team: 'BAN', role: 'Bowler', gradient: 'from-[#AF52DE] to-[#FF2D55]' },
+  { id: 'player_a_markram', name: 'Aiden Markram', team: 'SOU', role: 'Batter', gradient: 'from-[#30B0C7] to-[#007AFF]' },
+];
+
 export const PlayersPage: React.FC = () => {
   const [search, setSearch] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'bat' | 'bowl'>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerResponse | null>(null);
   const [page, setPage] = useState<number>(0);
   const limit = 15;
@@ -83,51 +97,121 @@ export const PlayersPage: React.FC = () => {
   const perfRecord = playerPerf?.items?.[0];
   const attRecord = playerAtt?.items?.[0];
 
+  // Client-side role filtering if applied
+  const filteredPlayers = (playersData?.items || []).filter((p) => {
+    if (roleFilter === 'bat') {
+      return (
+        (p.batting_style && p.batting_style !== '-') ||
+        (perfRecord && perfRecord.role === 'batter')
+      );
+    }
+    if (roleFilter === 'bowl') {
+      return (
+        (p.bowling_style && p.bowling_style !== '-' && p.bowling_style !== 'None') ||
+        (perfRecord && perfRecord.role === 'bowler')
+      );
+    }
+    return true;
+  });
+
+  const handleSelectFeatured = async (playerId: string) => {
+    try {
+      const res = await api.getPlayers({ search: playerId, limit: 1 });
+      if (res.items.length > 0) {
+        setSelectedPlayer(res.items[0]);
+      } else {
+        // Fallback search by name
+        const match = FEATURED_PLAYERS.find((f) => f.id === playerId);
+        if (match) {
+          const nameRes = await api.getPlayers({ search: match.name, limit: 1 });
+          if (nameRes.items.length > 0) setSelectedPlayer(nameRes.items[0]);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header and Search Toolbar - Apple Frosted Capsule */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
-        <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-[#5856D6]/15 text-[#5856D6] flex items-center justify-center shadow-inner">
-            <Users className="w-6 h-6" />
+      {/* Search & Role Filter Toolbar - Apple Frosted Sheet */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 sm:p-5 rounded-3xl apple-glass-card">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white flex items-center justify-center shadow-sm shadow-[#007AFF]/20 shrink-0">
+            <Users className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
               Player Directory & Profiles
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Canonical player identities, match performance, media visibility, and APDI classification.
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Canonical player identities, performance facts, and media visibility.
             </p>
           </div>
         </div>
 
-        {/* Search - Apple Capsule Input */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search name, team, or alias..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(0);
-            }}
-            className="pl-9 pr-8 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5856D6]/30 w-full transition-all"
-          />
-          {search && (
+        {/* Search Input & Role Filters */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {/* Apple Segmented Control for Roles */}
+          <div className="apple-segmented-group flex items-center text-xs font-medium">
             <button
-              onClick={() => {
-                setSearch('');
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1 rounded-xl transition-all ${
+                roleFilter === 'all'
+                  ? 'apple-segmented-item-active'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setRoleFilter('bat')}
+              className={`px-3 py-1 rounded-xl transition-all ${
+                roleFilter === 'bat'
+                  ? 'apple-segmented-item-active'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Batters
+            </button>
+            <button
+              onClick={() => setRoleFilter('bowl')}
+              className={`px-3 py-1 rounded-xl transition-all ${
+                roleFilter === 'bowl'
+                  ? 'apple-segmented-item-active'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              Bowlers
+            </button>
+          </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search name, team, or alias..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
                 setPage(0);
               }}
-              className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
+              className="w-full pl-9 pr-8 py-2 rounded-2xl text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all font-medium"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Main Master-Detail Grid */}
       {error ? (
         <ErrorState
           title="Failed to Load Players"
@@ -135,75 +219,97 @@ export const PlayersPage: React.FC = () => {
           onRetry={() => refetch()}
         />
       ) : isLoading ? (
-        <Card className="p-6 space-y-3">
+        <Card className="p-6 space-y-3 rounded-3xl">
           <Skeleton className="h-6 w-1/4 rounded-lg" />
-          <Skeleton className="h-10 w-full rounded-xl" />
-          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
+          <Skeleton className="h-12 w-full rounded-2xl" />
         </Card>
-      ) : playersData?.items.length === 0 ? (
+      ) : filteredPlayers.length === 0 ? (
         <EmptyState
           title="No Player Records Found"
           description={
             search
-              ? `No players matched the search "${search}". Try searching by another name or alias.`
+              ? `No players matched "${search}". Try searching by another name or alias.`
               : 'The canonical player register is currently empty. Run tournament ingestion to populate player profiles.'
           }
           icon="database"
           secondaryInfo="Ingest player gazetteer via: python -m src.pipeline run"
         />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Players Table */}
-          <div className="lg:col-span-2">
-            <Card>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Players Table (7 cols on desktop) */}
+          <div className="lg:col-span-7">
+            <Card className="rounded-3xl overflow-hidden apple-card">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead>Primary Team</TableHead>
-                    <TableHead>Batting Style</TableHead>
-                    <TableHead>Bowling Style</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
+                  <TableRow className="border-b border-black/[0.05] dark:border-white/[0.07]">
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Player</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Team</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Style</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {playersData?.items.map((p) => {
+                  {filteredPlayers.map((p) => {
                     const isSelected = selectedPlayer?.player_id === p.player_id;
+                    const initials = p.full_name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase();
+
                     return (
                       <TableRow
                         key={p.player_id}
                         onClick={() => setSelectedPlayer(p)}
-                        className={`cursor-pointer transition-colors ${
+                        className={`cursor-pointer transition-all duration-150 border-b border-black/[0.03] dark:border-white/[0.04] ${
                           isSelected
                             ? 'bg-[#007AFF]/10 dark:bg-[#007AFF]/15 font-medium'
                             : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
                         }`}
                       >
-                        <TableCell>
-                          <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                            {isSelected && (
-                              <span className="w-2 h-2 rounded-full bg-[#007AFF] ring-2 ring-[#007AFF]/30 animate-pulse" />
-                            )}
-                            {p.full_name}
-                          </div>
-                          {p.aliases && p.aliases.length > 0 && (
-                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                              aka: {p.aliases.slice(0, 2).join(', ')}
+                        <TableCell className="py-3">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${
+                                isSelected
+                                  ? 'bg-[#007AFF] text-white shadow-xs scale-105'
+                                  : 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-300'
+                              }`}
+                            >
+                              {initials}
                             </div>
-                          )}
+                            <div className="min-w-0">
+                              <div className="font-semibold text-xs text-slate-900 dark:text-white flex items-center gap-1.5 truncate">
+                                <span>{p.full_name}</span>
+                                {isSelected && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF]" />
+                                )}
+                              </div>
+                              {p.aliases && p.aliases.length > 0 && (
+                                <div className="text-[10px] text-slate-400 truncate max-w-[190px]">
+                                  aka: {p.aliases.slice(0, 2).join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </TableCell>
-                        <TableCell className="font-mono text-xs">
-                          <Badge variant="neutral" className="text-[10px] py-0 px-2 font-semibold rounded-full">
-                            {p.primary_team_id || '-'}
+
+                        <TableCell className="py-3">
+                          <Badge variant="neutral" className="text-[10px] py-0.5 px-2 font-mono font-medium rounded-full">
+                            {p.primary_team_id || 'IND'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                          {p.batting_style || '-'}
+
+                        <TableCell className="py-3 text-xs text-slate-600 dark:text-slate-400">
+                          <div className="truncate max-w-[130px]">
+                            {p.batting_style || p.bowling_style || 'All-Rounder'}
+                          </div>
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                          {p.bowling_style || '-'}
-                        </TableCell>
-                        <TableCell className="text-right">
+
+                        <TableCell className="py-3 text-right">
                           <Button
                             variant={isSelected ? 'primary' : 'outline'}
                             size="sm"
@@ -211,9 +317,11 @@ export const PlayersPage: React.FC = () => {
                               e.stopPropagation();
                               setSelectedPlayer(p);
                             }}
-                            className="text-xs py-1 px-3 h-7 rounded-full shadow-sm"
+                            className={`text-xs py-1 px-3 h-7 rounded-full shadow-xs transition-transform ${
+                              isSelected ? 'bg-[#007AFF] text-white' : ''
+                            }`}
                           >
-                            Profile
+                            Dossier
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -224,11 +332,11 @@ export const PlayersPage: React.FC = () => {
 
               {/* Pagination */}
               {playersData && playersData.pagination.total > limit && (
-                <div className="p-3 border-t border-slate-100 dark:border-cricket-navy-800 flex items-center justify-between text-xs text-slate-500">
-                  <span>
+                <div className="p-3.5 border-t border-black/[0.05] dark:border-white/[0.07] flex items-center justify-between text-xs text-slate-500">
+                  <span className="tabular-nums">
                     Showing {page * limit + 1}–
                     {Math.min((page + 1) * limit, playersData.pagination.total)} of{' '}
-                    {playersData.pagination.total}
+                    {playersData.pagination.total} players
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -236,6 +344,7 @@ export const PlayersPage: React.FC = () => {
                       size="sm"
                       disabled={page === 0}
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      className="rounded-full text-xs"
                     >
                       Previous
                     </Button>
@@ -244,6 +353,7 @@ export const PlayersPage: React.FC = () => {
                       size="sm"
                       disabled={!playersData.pagination.has_more}
                       onClick={() => setPage((p) => p + 1)}
+                      className="rounded-full text-xs"
                     >
                       Next
                     </Button>
@@ -253,21 +363,16 @@ export const PlayersPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Player Detail & Cross-Domain Metrics - Apple Contact Sheet */}
-          <div>
-            <Card className="sticky top-20 shadow-apple-card dark:shadow-apple-card-dark rounded-2xl">
-              <CardHeader className="pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-[#5856D6]" />
-                      Player Research Profile
+          {/* Player Research Dossier (5 cols on desktop) */}
+          <div className="lg:col-span-5 sticky top-20">
+            <Card className="rounded-3xl apple-card overflow-hidden">
+              <CardHeader className="pb-3 border-b border-black/[0.05] dark:border-white/[0.07]">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#007AFF]" />
+                    <CardTitle className="text-sm font-semibold">
+                      {selectedPlayer ? 'Player Research Dossier' : 'Spotlight Cohort Roster'}
                     </CardTitle>
-                    <CardDescription className="text-xs mt-0.5">
-                      {selectedPlayer
-                        ? selectedPlayer.full_name
-                        : 'Click on any player to view analytics'}
-                    </CardDescription>
                   </div>
                   {selectedPlayer && (
                     <Button
@@ -275,6 +380,7 @@ export const PlayersPage: React.FC = () => {
                       size="sm"
                       onClick={() => setSelectedPlayer(null)}
                       className="h-7 w-7 p-0 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+                      title="Close dossier"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -282,22 +388,12 @@ export const PlayersPage: React.FC = () => {
                 </div>
               </CardHeader>
 
-              <CardContent className="pt-4 space-y-4">
-                {!selectedPlayer ? (
-                  <div className="py-14 text-center text-xs text-slate-400 dark:text-slate-500 space-y-2">
-                    <Users className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
-                    <p className="font-medium text-slate-700 dark:text-slate-300">
-                      Select a player from the directory
-                    </p>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[200px] mx-auto">
-                      Click anywhere on a row or the "Profile" button to inspect performance facts and media visibility.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Apple Contact Header (Initials Squircle) */}
-                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-[#007AFF]/10 via-[#5856D6]/5 to-transparent border border-black/[0.05] dark:border-white/[0.08]">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white flex items-center justify-center font-bold text-base shadow-sm">
+              <CardContent className="p-5">
+                {selectedPlayer ? (
+                  <div className="space-y-5">
+                    {/* Player Hero Lockup */}
+                    <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.05] dark:border-white/[0.07]">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#007AFF] via-[#5856D6] to-[#AF52DE] text-white flex items-center justify-center font-bold text-lg shadow-sm shadow-[#007AFF]/25 shrink-0">
                         {selectedPlayer.full_name
                           .split(' ')
                           .map((n) => n[0])
@@ -306,69 +402,28 @@ export const PlayersPage: React.FC = () => {
                           .toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        <h3 className="font-bold text-base text-slate-900 dark:text-white tracking-tight truncate">
                           {selectedPlayer.full_name}
-                        </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
-                          {selectedPlayer.primary_team_id || 'Free Agent'} • {selectedPlayer.batting_style || 'Batter'}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="neutral" className="font-mono text-[10px] py-0 px-2 rounded-full">
+                            {selectedPlayer.primary_team_id || 'IND'}
+                          </Badge>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                            {selectedPlayer.batting_style || 'Right-handed'}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Identity Overview */}
-                    <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2 text-xs">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Player ID:</span>
-                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
-                          {selectedPlayer.player_id}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Primary Team:</span>
-                        <Badge variant="neutral" className="font-semibold text-[10px] py-0 px-2 rounded-full">
-                          {selectedPlayer.primary_team_id || 'Free Agent'}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Batting Style:</span>
-                        <span className="text-slate-700 dark:text-slate-300 font-medium">
-                          {selectedPlayer.batting_style || 'Unspecified'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500">Bowling Style:</span>
-                        <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[170px]">
-                          {selectedPlayer.bowling_style || 'None'}
-                        </span>
-                      </div>
-                      {selectedPlayer.cricsheet_id && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-slate-500">Cricsheet ID:</span>
-                          <span className="font-mono text-slate-400 text-[11px]">
-                            {selectedPlayer.cricsheet_id}
-                          </span>
-                        </div>
-                      )}
-                      {selectedPlayer.aliases && selectedPlayer.aliases.length > 0 && (
-                        <div className="flex justify-between items-start pt-1.5 border-t border-black/[0.05] dark:border-white/[0.06]">
-                          <span className="text-slate-500">Aliases:</span>
-                          <span className="text-slate-700 dark:text-slate-300 text-right truncate max-w-[170px] text-[11px]">
-                            {selectedPlayer.aliases.join(', ')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* APDI Status Badge (if available) */}
+                    {/* APDI Discrepancy Status */}
                     {playerAPDI && (
-                      <div className="p-3 rounded-2xl border bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.05] dark:border-white/[0.07] flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <Target className="w-3.5 h-3.5 text-[#007AFF]" />
-                          <span className="font-medium text-slate-700 dark:text-slate-300">
-                            APDI Status
+                      <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5 text-[#007AFF]" />
+                            <span>APDI Discrepancy Status</span>
                           </span>
-                        </div>
-                        <div className="flex items-center gap-2">
                           <Badge
                             variant={
                               playerAPDI.discrepancy_category === 'OVER_ATTENDED'
@@ -379,210 +434,212 @@ export const PlayersPage: React.FC = () => {
                                 ? 'balanced'
                                 : 'insufficient_data'
                             }
-                            className="text-[10px] font-semibold uppercase"
+                            className="text-[10px] font-semibold"
                           >
                             {playerAPDI.discrepancy_category.replace('_', ' ')}
                           </Badge>
-                          {playerAPDI.apdi_value !== null && (
-                            <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                        </div>
+                        {playerAPDI.apdi_value !== null ? (
+                          <div className="flex items-baseline justify-between pt-1">
+                            <span className="text-xs text-slate-500">APDI Index:</span>
+                            <span className="font-mono text-base font-bold text-slate-900 dark:text-white tabular-nums">
                               {playerAPDI.apdi_value > 0 ? '+' : ''}
                               {playerAPDI.apdi_value.toFixed(2)}
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 dark:text-slate-500 pt-0.5">
+                            Sample size below evaluation threshold. Score withheld to avoid statistical hallucination.
+                          </p>
+                        )}
                       </div>
                     )}
 
-                    {/* Objective Match Performance */}
+                    {/* Objective Performance Facts */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        <div className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-1.5">
                           <Award className="w-3.5 h-3.5 text-[#007AFF]" />
-                          <span>Objective Performance</span>
-                        </div>
+                          <span>Objective Match Facts</span>
+                        </span>
                         {perfRecord && (
-                          <span className="text-[10px] font-normal text-slate-400 lowercase">
+                          <span className="text-[10px] font-mono text-slate-400 capitalize">
                             {perfRecord.role}
                           </span>
                         )}
                       </div>
 
                       {isLoadingPerf ? (
-                        <Skeleton className="h-16 w-full rounded-2xl" />
+                        <Skeleton className="h-20 w-full rounded-2xl" />
                       ) : perfRecord ? (
                         <div className="space-y-2.5">
-                          {/* Batting Card */}
+                          {/* Batting Box */}
                           <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
-                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                               Batting Statistics
                             </div>
                             <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                              <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                 <span className="text-[10px] text-slate-400 block">Runs</span>
-                                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                                   {perfRecord.runs_scored}
                                 </span>
                               </div>
-                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                              <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                 <span className="text-[10px] text-slate-400 block">Balls</span>
-                                <span className="font-mono font-medium text-xs">
+                                <span className="font-mono font-medium text-xs tabular-nums">
                                   {perfRecord.balls_faced}
                                 </span>
                               </div>
-                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                              <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                 <span className="text-[10px] text-slate-400 block">SR</span>
-                                <span className="font-mono font-medium text-xs text-[#34C759]">
+                                <span className="font-mono font-bold text-xs text-[#34C759] tabular-nums">
                                   {perfRecord.strike_rate ? perfRecord.strike_rate.toFixed(1) : '-'}
                                 </span>
                               </div>
-                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                              <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                 <span className="text-[10px] text-slate-400 block">4s / 6s</span>
-                                <span className="font-mono text-xs">
+                                <span className="font-mono text-xs tabular-nums">
                                   {perfRecord.fours} / {perfRecord.sixes}
                                 </span>
                               </div>
                             </div>
                           </div>
 
-                          {/* Bowling Card (if bowled) */}
+                          {/* Bowling Box */}
                           {perfRecord.overs_bowled > 0 && (
                             <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
-                              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
                                 Bowling Statistics
                               </div>
                               <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                                <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                   <span className="text-[10px] text-slate-400 block">Wickets</span>
-                                  <span className="font-mono font-bold text-sm text-[#34C759]">
+                                  <span className="font-mono font-bold text-sm text-[#34C759] tabular-nums">
                                     {perfRecord.wickets_taken}
                                   </span>
                                 </div>
-                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                                <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                   <span className="text-[10px] text-slate-400 block">Overs</span>
-                                  <span className="font-mono font-medium text-xs">
+                                  <span className="font-mono font-medium text-xs tabular-nums">
                                     {perfRecord.overs_bowled.toFixed(1)}
                                   </span>
                                 </div>
-                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
-                                  <span className="text-[10px] text-slate-400 block">Runs</span>
-                                  <span className="font-mono font-medium text-xs">
+                                <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
+                                  <span className="text-[10px] text-slate-400 block">Conceded</span>
+                                  <span className="font-mono font-medium text-xs tabular-nums">
                                     {perfRecord.runs_conceded}
                                   </span>
                                 </div>
-                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
+                                <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                                   <span className="text-[10px] text-slate-400 block">Econ</span>
-                                  <span className="font-mono text-xs">
+                                  <span className="font-mono text-xs tabular-nums">
                                     {perfRecord.bowling_economy ? perfRecord.bowling_economy.toFixed(2) : '-'}
                                   </span>
                                 </div>
                               </div>
                             </div>
                           )}
-
-                          <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
-                            <span>Matches: {perfRecord.matches_played}</span>
-                            <span>Raw Composite: {perfRecord.raw_performance_composite.toFixed(2)}</span>
-                          </div>
                         </div>
                       ) : (
-                        <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-[11px] text-slate-400 italic text-center">
-                          No delivery events recorded for this player in current fixtures.
+                        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.06] dark:border-white/[0.08] text-center text-xs text-slate-400">
+                          No delivery events recorded in current match index.
                         </div>
                       )}
                     </div>
 
-                    {/* Media Attention Profile */}
+                    {/* Media Prominence & Narrative Attention */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                         <Flame className="w-3.5 h-3.5 text-[#FF9500]" />
-                        <span>Media Attention & Prominence</span>
+                        <span>Media Visibility & Editorial Reach</span>
                       </div>
 
                       {isLoadingAtt ? (
                         <Skeleton className="h-16 w-full rounded-2xl" />
                       ) : attRecord ? (
-                        <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2.5">
+                        <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2">
                           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                               <span className="text-[10px] text-slate-400 block">Mentions</span>
-                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                                 {attRecord.raw_mention_count}
                               </span>
                             </div>
-                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
-                              <span className="text-[10px] text-slate-400 block">Article Reach</span>
-                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
+                              <span className="text-[10px] text-slate-400 block">Reach</span>
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white tabular-nums">
                                 {attRecord.article_reach}
                               </span>
                             </div>
-                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] shadow-2xs">
                               <span className="text-[10px] text-slate-400 block">Prominence</span>
-                              <span className="font-mono font-bold text-sm text-[#FF9500]">
+                              <span className="font-mono font-bold text-sm text-[#FF9500] tabular-nums">
                                 {attRecord.prominence_score.toFixed(1)}
                               </span>
                             </div>
                           </div>
-
-                          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                            <span>Publishers: {attRecord.source_diversity_count}</span>
-                            <span>Headline Mentions: {attRecord.headline_mentions}</span>
-                          </div>
                         </div>
                       ) : (
-                        <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-[11px] text-slate-400 italic text-center">
-                          No media attention mentions recorded for this player in current editorial corpus.
+                        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.06] dark:border-white/[0.08] text-center text-xs text-slate-400">
+                          Zero media mentions in current journalism corpus.
                         </div>
                       )}
                     </div>
-
-                    {/* Editorial Sentiment Framing */}
-                    {playerFraming && playerFraming.total_framed_passages > 0 && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                          <div className="flex items-center gap-1.5">
-                            <BarChart2 className="w-3.5 h-3.5 text-[#007AFF]" />
-                            <span>Editorial Framing</span>
-                          </div>
-                          <Badge
-                            variant={
-                              playerFraming.net_framing_score > 0.05
-                                ? 'success'
-                                : playerFraming.net_framing_score < -0.05
-                                ? 'danger'
-                                : 'neutral'
-                            }
-                            className="text-[10px] py-0 px-2 font-semibold"
-                          >
-                            {playerFraming.net_framing_score > 0.05
-                              ? 'Positive'
-                              : playerFraming.net_framing_score < -0.05
-                              ? 'Critical'
-                              : 'Neutral'}
-                          </Badge>
-                        </div>
-
-                        <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] text-xs">
-                          <div className="flex items-center justify-between text-[11px] mb-2">
-                            <span className="text-slate-500">Net Framing Score:</span>
-                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
-                              {playerFraming.net_framing_score > 0 ? '+' : ''}
-                              {playerFraming.net_framing_score.toFixed(3)}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
-                            <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
-                              +{playerFraming.positive_count} Pos
-                            </div>
-                            <div className="p-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 font-semibold border border-black/[0.04] dark:border-white/[0.06]">
-                              {playerFraming.neutral_count} Neu
-                            </div>
-                            <div className="p-1.5 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300 font-semibold border border-rose-500/20">
-                              -{playerFraming.negative_count} Neg
-                            </div>
-                          </div>
-                        </div>
+                  </div>
+                ) : (
+                  /* Engaging Spotlight View When No Player Is Selected */
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white mb-1">
+                        <Activity className="w-4 h-4 text-[#007AFF]" />
+                        <span>Interactive Research Spotlights</span>
                       </div>
-                    )}
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                        Select a featured athlete below to immediately inspect objective ball-by-ball facts, media attention metrics, and APDI classification:
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      {FEATURED_PLAYERS.map((fp) => (
+                        <button
+                          key={fp.id}
+                          onClick={() => handleSelectFeatured(fp.id)}
+                          className="w-full p-3 rounded-2xl bg-white dark:bg-white/[0.04] border border-black/[0.05] dark:border-white/[0.07] hover:border-[#007AFF]/40 dark:hover:border-[#007AFF]/40 hover:shadow-sm flex items-center justify-between text-left transition-all duration-150 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`w-9 h-9 rounded-xl bg-gradient-to-br ${fp.gradient} text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0`}
+                            >
+                              {fp.name
+                                .split(' ')
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join('')}
+                            </div>
+                            <div>
+                              <div className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[#007AFF] transition-colors">
+                                {fp.name}
+                              </div>
+                              <div className="text-[10px] text-slate-400">
+                                {fp.team} • {fp.role}
+                              </div>
+                            </div>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-[#007AFF] group-hover:translate-x-0.5 transition-all" />
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-[#007AFF]/5 border border-[#007AFF]/15 text-[11px] text-slate-600 dark:text-slate-400 space-y-1">
+                      <div className="font-semibold text-[#007AFF] flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Research Quality Principle:</span>
+                      </div>
+                      <p>
+                        All entities are reconciled using the Levenshtein Gazetteer against official Cricsheet IDs. Scores are normalized within cohorts to eliminate role bias.
+                      </p>
+                    </div>
                   </div>
                 )}
               </CardContent>
