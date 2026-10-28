@@ -32,15 +32,16 @@ import type { PlayerResponse } from '../../types/api';
 // Curated cohort spotlights for quick research selection
 const FEATURED_PLAYERS = [
   { id: 'player_v_kohli', name: 'Virat Kohli', team: 'IND', role: 'Batter', gradient: 'from-[#007AFF] to-[#5856D6]' },
+  { id: 'player_jj_bumrah', name: 'Jasprit Bumrah', team: 'IND', role: 'Bowler', gradient: 'from-[#34C759] to-[#30B0C7]' },
   { id: 'player_a_johnson', name: 'Aaron Johnson', team: 'CAN', role: 'Batter', gradient: 'from-[#FF9500] to-[#FF3B30]' },
   { id: 'player_a_zampa', name: 'Adam Zampa', team: 'AUS', role: 'Bowler', gradient: 'from-[#34C759] to-[#007AFF]' },
   { id: 'player_mustafizur_rahman', name: 'Mustafizur Rahman', team: 'BAN', role: 'Bowler', gradient: 'from-[#AF52DE] to-[#FF2D55]' },
-  { id: 'player_a_markram', name: 'Aiden Markram', team: 'SOU', role: 'Batter', gradient: 'from-[#30B0C7] to-[#007AFF]' },
+  { id: 'player_hardik_pandya', name: 'Hardik Pandya', team: 'IND', role: 'All-Rounder', gradient: 'from-[#FF9500] to-[#AF52DE]' },
 ];
 
 export const PlayersPage: React.FC = () => {
   const [search, setSearch] = useState<string>('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'bat' | 'bowl'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'batter' | 'bowler' | 'all_rounder'>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerResponse | null>(null);
   const [page, setPage] = useState<number>(0);
   const limit = 15;
@@ -51,9 +52,10 @@ export const PlayersPage: React.FC = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['players', search, page],
+    queryKey: ['players', search, roleFilter, page],
     queryFn: () =>
       api.getPlayers({
+        role: roleFilter === 'all' ? undefined : roleFilter,
         search: search.trim() || undefined,
         limit,
         offset: page * limit,
@@ -87,32 +89,8 @@ export const PlayersPage: React.FC = () => {
     enabled: !!selectedPlayer,
   });
 
-  // Query sentiment framing for selected player
-  const { data: playerFraming } = useQuery({
-    queryKey: ['playerFraming', selectedPlayer?.player_id],
-    queryFn: () => api.getEntityFraming(selectedPlayer!.player_id).catch(() => null),
-    enabled: !!selectedPlayer,
-  });
-
   const perfRecord = playerPerf?.items?.[0];
   const attRecord = playerAtt?.items?.[0];
-
-  // Client-side role filtering if applied
-  const filteredPlayers = (playersData?.items || []).filter((p) => {
-    if (roleFilter === 'bat') {
-      return (
-        (p.batting_style && p.batting_style !== '-') ||
-        (perfRecord && perfRecord.role === 'batter')
-      );
-    }
-    if (roleFilter === 'bowl') {
-      return (
-        (p.bowling_style && p.bowling_style !== '-' && p.bowling_style !== 'None') ||
-        (perfRecord && perfRecord.role === 'bowler')
-      );
-    }
-    return true;
-  });
 
   const handleSelectFeatured = async (playerId: string) => {
     try {
@@ -120,7 +98,6 @@ export const PlayersPage: React.FC = () => {
       if (res.items.length > 0) {
         setSelectedPlayer(res.items[0]);
       } else {
-        // Fallback search by name
         const match = FEATURED_PLAYERS.find((f) => f.id === playerId);
         if (match) {
           const nameRes = await api.getPlayers({ search: match.name, limit: 1 });
@@ -130,6 +107,81 @@ export const PlayersPage: React.FC = () => {
     } catch {
       // ignore
     }
+  };
+
+  // Helper for role styling
+  const getRoleBadge = (role?: string | null) => {
+    switch (role) {
+      case 'bowler':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] border border-[#34C759]/25">
+            Bowler
+          </span>
+        );
+      case 'all_rounder':
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#AF52DE]/15 text-[#8944AB] dark:text-[#BF5AF2] border border-[#AF52DE]/25">
+            All-Rounder
+          </span>
+        );
+      case 'batter':
+      default:
+        return (
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] border border-[#007AFF]/25">
+            Batter
+          </span>
+        );
+    }
+  };
+
+  // Helper for role gradient avatar
+  const getRoleGradient = (role?: string | null) => {
+    switch (role) {
+      case 'bowler':
+        return 'bg-gradient-to-br from-[#34C759] to-[#30B0C7] text-white shadow-xs';
+      case 'all_rounder':
+        return 'bg-gradient-to-br from-[#FF9500] to-[#AF52DE] text-white shadow-xs';
+      case 'batter':
+      default:
+        return 'bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white shadow-xs';
+    }
+  };
+
+  // Helper for clean cricket discipline description
+  const getDisciplineText = (p: PlayerResponse) => {
+    if (p.role === 'bowler' || p.role === 'all_rounder') {
+      if (p.bowling_style && !p.bowling_style.startsWith('None')) {
+        return p.bowling_style;
+      }
+    }
+    if (p.bowling_style && p.bowling_style.includes('Wicketkeeper')) {
+      return 'Wicketkeeper Batter';
+    }
+    return p.batting_style ? `${p.batting_style} bat` : 'Specialist Batter';
+  };
+
+  // Helper for team badge styling
+  const getTeamBadge = (teamId?: string | null) => {
+    const tid = teamId || 'IND';
+    const teamColors: Record<string, string> = {
+      IND: 'bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] border-[#007AFF]/25',
+      AUS: 'bg-[#FFCC00]/20 text-[#B28900] dark:text-[#FFD60A] border-[#FFCC00]/30',
+      ENG: 'bg-[#FF3B30]/15 text-[#FF3B30] dark:text-[#FF453A] border-[#FF3B30]/25',
+      PAK: 'bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] border-[#34C759]/25',
+      CAN: 'bg-[#FF3B30]/15 text-[#FF3B30] dark:text-[#FF453A] border-[#FF3B30]/25',
+      WES: 'bg-[#AF52DE]/15 text-[#AF52DE] dark:text-[#BF5AF2] border-[#AF52DE]/25',
+      SOU: 'bg-[#30B0C7]/15 text-[#30B0C7] border-[#30B0C7]/25',
+      UNI: 'bg-[#5856D6]/15 text-[#5856D6] dark:text-[#5E5CE6] border-[#5856D6]/25',
+      USA: 'bg-[#5856D6]/15 text-[#5856D6] dark:text-[#5E5CE6] border-[#5856D6]/25',
+      BAN: 'bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] border-[#34C759]/25',
+    };
+    const colorClass = teamColors[tid] || 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 border-black/[0.05] dark:border-white/[0.08]';
+
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${colorClass}`}>
+        {tid}
+      </span>
+    );
   };
 
   return (
@@ -145,7 +197,7 @@ export const PlayersPage: React.FC = () => {
               Player Directory & Profiles
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Canonical player identities, performance facts, and media visibility.
+              Canonical tournament registry with empirical role classifications.
             </p>
           </div>
         </div>
@@ -155,43 +207,65 @@ export const PlayersPage: React.FC = () => {
           {/* Apple Segmented Control for Roles */}
           <div className="apple-segmented-group flex items-center text-xs font-medium">
             <button
-              onClick={() => setRoleFilter('all')}
+              onClick={() => {
+                setRoleFilter('all');
+                setPage(0);
+              }}
               className={`px-3 py-1 rounded-xl transition-all ${
                 roleFilter === 'all'
                   ? 'apple-segmented-item-active'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              All
+              All (107)
             </button>
             <button
-              onClick={() => setRoleFilter('bat')}
+              onClick={() => {
+                setRoleFilter('batter');
+                setPage(0);
+              }}
               className={`px-3 py-1 rounded-xl transition-all ${
-                roleFilter === 'bat'
+                roleFilter === 'batter'
                   ? 'apple-segmented-item-active'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Batters
+              Batters (47)
             </button>
             <button
-              onClick={() => setRoleFilter('bowl')}
+              onClick={() => {
+                setRoleFilter('bowler');
+                setPage(0);
+              }}
               className={`px-3 py-1 rounded-xl transition-all ${
-                roleFilter === 'bowl'
+                roleFilter === 'bowler'
                   ? 'apple-segmented-item-active'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              Bowlers
+              Bowlers (55)
+            </button>
+            <button
+              onClick={() => {
+                setRoleFilter('all_rounder');
+                setPage(0);
+              }}
+              className={`px-3 py-1 rounded-xl transition-all ${
+                roleFilter === 'all_rounder'
+                  ? 'apple-segmented-item-active'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              All-Rounders (5)
             </button>
           </div>
 
           {/* Search Box */}
-          <div className="relative w-full sm:w-64">
+          <div className="relative w-full sm:w-60">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search name, team, or alias..."
+              placeholder="Search player or alias..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -219,22 +293,22 @@ export const PlayersPage: React.FC = () => {
           onRetry={() => refetch()}
         />
       ) : isLoading ? (
-        <Card className="p-6 space-y-3 rounded-3xl">
+        <Card className="p-6 space-y-3 rounded-3xl apple-card">
           <Skeleton className="h-6 w-1/4 rounded-lg" />
           <Skeleton className="h-12 w-full rounded-2xl" />
           <Skeleton className="h-12 w-full rounded-2xl" />
           <Skeleton className="h-12 w-full rounded-2xl" />
         </Card>
-      ) : filteredPlayers.length === 0 ? (
+      ) : playersData?.items.length === 0 ? (
         <EmptyState
-          title="No Player Records Found"
+          title="No Players Found"
           description={
             search
-              ? `No players matched "${search}". Try searching by another name or alias.`
-              : 'The canonical player register is currently empty. Run tournament ingestion to populate player profiles.'
+              ? `No players matched "${search}" in the selected cohort.`
+              : 'No players match the current criteria.'
           }
           icon="database"
-          secondaryInfo="Ingest player gazetteer via: python -m src.pipeline run"
+          secondaryInfo="Try clearing filters or resetting the search box."
         />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -246,12 +320,12 @@ export const PlayersPage: React.FC = () => {
                   <TableRow className="border-b border-black/[0.05] dark:border-white/[0.07]">
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Player</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Team</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Style</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Role & Discipline</TableHead>
                     <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPlayers.map((p) => {
+                  {playersData?.items.map((p) => {
                     const isSelected = selectedPlayer?.player_id === p.player_id;
                     const initials = p.full_name
                       .split(' ')
@@ -273,11 +347,9 @@ export const PlayersPage: React.FC = () => {
                         <TableCell className="py-3">
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${
-                                isSelected
-                                  ? 'bg-[#007AFF] text-white shadow-xs scale-105'
-                                  : 'bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-300'
-                              }`}
+                              className={`w-9 h-9 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 transition-transform ${getRoleGradient(
+                                p.role
+                              )} ${isSelected ? 'scale-110 ring-2 ring-[#007AFF]' : ''}`}
                             >
                               {initials}
                             </div>
@@ -289,7 +361,7 @@ export const PlayersPage: React.FC = () => {
                                 )}
                               </div>
                               {p.aliases && p.aliases.length > 0 && (
-                                <div className="text-[10px] text-slate-400 truncate max-w-[190px]">
+                                <div className="text-[10px] text-slate-400 truncate max-w-[170px]">
                                   aka: {p.aliases.slice(0, 2).join(', ')}
                                 </div>
                               )}
@@ -298,14 +370,15 @@ export const PlayersPage: React.FC = () => {
                         </TableCell>
 
                         <TableCell className="py-3">
-                          <Badge variant="neutral" className="text-[10px] py-0.5 px-2 font-mono font-medium rounded-full">
-                            {p.primary_team_id || 'IND'}
-                          </Badge>
+                          {getTeamBadge(p.primary_team_id)}
                         </TableCell>
 
-                        <TableCell className="py-3 text-xs text-slate-600 dark:text-slate-400">
-                          <div className="truncate max-w-[130px]">
-                            {p.batting_style || p.bowling_style || 'All-Rounder'}
+                        <TableCell className="py-3">
+                          <div className="space-y-0.5">
+                            <div>{getRoleBadge(p.role)}</div>
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate max-w-[150px]">
+                              {getDisciplineText(p)}
+                            </div>
                           </div>
                         </TableCell>
 
@@ -336,7 +409,7 @@ export const PlayersPage: React.FC = () => {
                   <span className="tabular-nums">
                     Showing {page * limit + 1}–
                     {Math.min((page + 1) * limit, playersData.pagination.total)} of{' '}
-                    {playersData.pagination.total} players
+                    {playersData.pagination.total} {roleFilter === 'all' ? 'players' : `${roleFilter}s`}
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -393,7 +466,11 @@ export const PlayersPage: React.FC = () => {
                   <div className="space-y-5">
                     {/* Player Hero Lockup */}
                     <div className="flex items-center gap-3.5 pb-4 border-b border-black/[0.05] dark:border-white/[0.07]">
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#007AFF] via-[#5856D6] to-[#AF52DE] text-white flex items-center justify-center font-bold text-lg shadow-sm shadow-[#007AFF]/25 shrink-0">
+                      <div
+                        className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm shrink-0 ${getRoleGradient(
+                          selectedPlayer.role
+                        )}`}
+                      >
                         {selectedPlayer.full_name
                           .split(' ')
                           .map((n) => n[0])
@@ -406,11 +483,10 @@ export const PlayersPage: React.FC = () => {
                           {selectedPlayer.full_name}
                         </h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="neutral" className="font-mono text-[10px] py-0 px-2 rounded-full">
-                            {selectedPlayer.primary_team_id || 'IND'}
-                          </Badge>
+                          {getTeamBadge(selectedPlayer.primary_team_id)}
+                          {getRoleBadge(selectedPlayer.role)}
                           <span className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                            {selectedPlayer.batting_style || 'Right-handed'}
+                            {getDisciplineText(selectedPlayer)}
                           </span>
                         </div>
                       </div>
@@ -609,7 +685,7 @@ export const PlayersPage: React.FC = () => {
                         >
                           <div className="flex items-center gap-3">
                             <div
-                              className={`w-9 h-9 rounded-xl bg-gradient-to-br ${fp.gradient} text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0`}
+                              className={`w-9 h-9 rounded-2xl bg-gradient-to-br ${fp.gradient} text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0`}
                             >
                               {fp.name
                                 .split(' ')
@@ -621,8 +697,10 @@ export const PlayersPage: React.FC = () => {
                               <div className="text-xs font-semibold text-slate-900 dark:text-white group-hover:text-[#007AFF] transition-colors">
                                 {fp.name}
                               </div>
-                              <div className="text-[10px] text-slate-400">
-                                {fp.team} • {fp.role}
+                              <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                <span>{fp.team}</span>
+                                <span>•</span>
+                                <span>{fp.role}</span>
                               </div>
                             </div>
                           </div>

@@ -146,6 +146,7 @@ export interface PlayerResponse {
   primary_team_id: string | null;
   batting_style: string | null;
   bowling_style: string | null;
+  role?: string | null;
   aliases: string[];
 }
 

@@ -14,6 +14,7 @@ class PlayerResponse(BaseModel):
     primary_team_id: Optional[str] = None
     batting_style: Optional[str] = None
     bowling_style: Optional[str] = None
+    role: Optional[str] = None
     aliases: List[str] = Field(default_factory=list)
 
 

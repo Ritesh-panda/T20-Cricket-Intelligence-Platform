@@ -114,6 +114,7 @@ export const api = {
 
   // 3. Players & Teams
   getPlayers: async (params?: {
+    role?: string;
     team_id?: string;
     search?: string;
     limit?: number;
