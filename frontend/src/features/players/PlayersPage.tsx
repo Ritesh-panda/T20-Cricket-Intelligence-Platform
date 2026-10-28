@@ -321,7 +321,7 @@ export const PlayersPage: React.FC = () => {
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Player</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Team</TableHead>
                     <TableHead className="text-xs font-semibold uppercase tracking-wider text-slate-400">Role & Discipline</TableHead>
-                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Action</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase tracking-wider text-slate-400">Intelligence Dossier</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -390,11 +390,23 @@ export const PlayersPage: React.FC = () => {
                               e.stopPropagation();
                               setSelectedPlayer(p);
                             }}
-                            className={`text-xs py-1 px-3 h-7 rounded-full shadow-xs transition-transform ${
-                              isSelected ? 'bg-[#007AFF] text-white' : ''
+                            className={`text-xs py-1 px-3 h-7 rounded-full shadow-xs transition-all gap-1.5 inline-flex items-center ${
+                              isSelected
+                                ? 'bg-[#007AFF] text-white ring-2 ring-[#007AFF]/30'
+                                : 'hover:border-[#007AFF]/40 hover:text-[#007AFF]'
                             }`}
                           >
-                            Dossier
+                            {isSelected ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Inspecting</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>View Profile</span>
+                                <ArrowRight className="w-3 h-3 text-slate-400" />
+                              </>
+                            )}
                           </Button>
                         </TableCell>
                       </TableRow>

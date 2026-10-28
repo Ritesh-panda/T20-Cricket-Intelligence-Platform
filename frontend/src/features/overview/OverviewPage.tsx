@@ -374,17 +374,26 @@ export const OverviewPage: React.FC = () => {
                   </span>
                 </Link>
 
-                <div className="flex items-center justify-between text-xs p-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03]">
+                <Link
+                  to="/apdi?category=INSUFFICIENT_DATA"
+                  className="flex items-center justify-between text-xs p-2.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] hover:bg-slate-500/10 transition-colors group"
+                  title="Click to view all 103 players safeguarded by the analytical quality gate"
+                >
                   <span className="flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-slate-400/20" />
-                    <span className="text-slate-700 dark:text-slate-300 font-medium">
-                      Insufficient Data (Sample &lt; 10)
-                    </span>
+                    <div>
+                      <span className="text-slate-700 dark:text-slate-300 font-medium group-hover:text-slate-900 dark:group-hover:text-white transition-colors block">
+                        Guardrail Safeguard (Sample &lt; 10)
+                      </span>
+                      <span className="text-[10px] text-slate-400 block font-normal">
+                        Score withheld to avoid fabrication (0 editorial articles in corpus)
+                      </span>
+                    </div>
                   </span>
                   <span className="font-semibold tabular-nums text-slate-900 dark:text-white">
                     {overview?.insufficient_data_count || 103}
                   </span>
-                </div>
+                </Link>
               </div>
 
               <div className="pt-2">
