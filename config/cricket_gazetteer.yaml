@@ -17,7 +17,7 @@ entities:
         - text: "IND"
           ambiguous: false
 
-    - canonical_id: "SA"
+    - canonical_id: "SOU"
       name: "South Africa"
       aliases:
         - text: "South Africa"
@@ -25,6 +25,8 @@ entities:
         - text: "Proteas"
           ambiguous: false
         - text: "SA"
+          ambiguous: false
+        - text: "SOU"
           ambiguous: false
 
     - canonical_id: "AUS"
@@ -53,7 +55,7 @@ entities:
         - text: "PAK"
           ambiguous: false
 
-    - canonical_id: "WI"
+    - canonical_id: "WES"
       name: "West Indies"
       aliases:
         - text: "West Indies"
@@ -61,6 +63,8 @@ entities:
         - text: "Windies"
           ambiguous: false
         - text: "WI"
+          ambiguous: false
+        - text: "WES"
           ambiguous: false
 
     - canonical_id: "AFG"
@@ -72,7 +76,7 @@ entities:
           ambiguous: false
 
   players:
-    - canonical_id: "player_virat_kohli"
+    - canonical_id: "player_v_kohli"
       full_name: "Virat Kohli"
       primary_team_id: "IND"
       aliases:
@@ -80,27 +84,33 @@ entities:
           ambiguous: false
         - text: "V. Kohli"
           ambiguous: false
+        - text: "V Kohli"
+          ambiguous: false
         - text: "Kohli"
           ambiguous: false
         - text: "King Kohli"
           ambiguous: false
 
-    - canonical_id: "player_jasprit_bumrah"
+    - canonical_id: "player_jj_bumrah"
       full_name: "Jasprit Bumrah"
       primary_team_id: "IND"
       aliases:
         - text: "Jasprit Bumrah"
+          ambiguous: false
+        - text: "JJ Bumrah"
           ambiguous: false
         - text: "J. Bumrah"
           ambiguous: false
         - text: "Bumrah"
           ambiguous: false
 
-    - canonical_id: "player_rohit_sharma"
+    - canonical_id: "player_rg_sharma"
       full_name: "Rohit Sharma"
       primary_team_id: "IND"
       aliases:
         - text: "Rohit Sharma"
+          ambiguous: false
+        - text: "RG Sharma"
           ambiguous: false
         - text: "Rohit"
           ambiguous: false
@@ -110,22 +120,26 @@ entities:
         - text: "Hitman"
           ambiguous: false
 
-    - canonical_id: "player_heinrich_klaasen"
+    - canonical_id: "player_h_klaasen"
       full_name: "Heinrich Klaasen"
-      primary_team_id: "SA"
+      primary_team_id: "SOU"
       aliases:
         - text: "Heinrich Klaasen"
+          ambiguous: false
+        - text: "H Klaasen"
           ambiguous: false
         - text: "H. Klaasen"
           ambiguous: false
         - text: "Klaasen"
           ambiguous: false
 
-    - canonical_id: "player_hardik_pandya"
+    - canonical_id: "player_hh_pandya"
       full_name: "Hardik Pandya"
       primary_team_id: "IND"
       aliases:
         - text: "Hardik Pandya"
+          ambiguous: false
+        - text: "HH Pandya"
           ambiguous: false
         - text: "Hardik"
           ambiguous: false
@@ -133,11 +147,13 @@ entities:
           ambiguous: true
           notes: "Ambiguous surname (Hardik Pandya vs Krunal Pandya)"
 
-    - canonical_id: "player_travis_head"
+    - canonical_id: "player_tm_head"
       full_name: "Travis Head"
       primary_team_id: "AUS"
       aliases:
         - text: "Travis Head"
+          ambiguous: false
+        - text: "TM Head"
           ambiguous: false
         - text: "T. Head"
           ambiguous: false
@@ -145,15 +161,28 @@ entities:
           ambiguous: true
           notes: "Common English word and player surname"
 
-    - canonical_id: "player_jos_buttler"
+    - canonical_id: "player_jc_buttler"
       full_name: "Jos Buttler"
       primary_team_id: "ENG"
       aliases:
         - text: "Jos Buttler"
           ambiguous: false
+        - text: "JC Buttler"
+          ambiguous: false
         - text: "J. Buttler"
           ambiguous: false
         - text: "Buttler"
+          ambiguous: false
+
+    - canonical_id: "player_jasdeep_singh"
+      full_name: "Jasdeep Singh"
+      primary_team_id: "UNI"
+      aliases:
+        - text: "Jasdeep Singh"
+          ambiguous: false
+        - text: "Jessy Singh"
+          ambiguous: false
+        - text: "J. Singh"
           ambiguous: false
 
     - canonical_id: "player_rashid_khan"
