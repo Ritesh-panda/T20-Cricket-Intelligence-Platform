@@ -178,6 +178,37 @@ def _parse_apdi_row(row: Any) -> APDIRecordResponse:
     )
 
 
+def _resolve_entity_alias_ids(storage: SQLiteStorageManager, entity_id: str) -> List[str]:
+    """Resolves potential alias IDs for an entity across players, teams, and gazetteer slugs."""
+    ids = [entity_id]
+    with storage._get_connection() as conn:
+        clean_key = entity_id.replace("player_", "").replace("_", " ").strip()
+        p_row = conn.execute(
+            "SELECT player_id, full_name FROM players WHERE player_id = ? OR full_name LIKE ?;",
+            (entity_id, f"%{clean_key}%"),
+        ).fetchone()
+        if p_row:
+            p_id = p_row["player_id"]
+            if p_id not in ids:
+                ids.append(p_id)
+            full_name = p_row["full_name"] or ""
+            import re
+            clean = re.sub(r"[^a-z0-9]+", "_", full_name.lower()).strip("_")
+            if clean:
+                gaz_slug = f"player_{clean}"
+                if gaz_slug not in ids:
+                    ids.append(gaz_slug)
+        t_row = conn.execute(
+            "SELECT team_id, name FROM teams WHERE team_id = ? OR name LIKE ?;",
+            (entity_id, f"%{entity_id}%"),
+        ).fetchone()
+        if t_row:
+            t_id = t_row["team_id"]
+            if t_id not in ids:
+                ids.append(t_id)
+    return ids
+
+
 @router.get("/overview", response_model=AnalyticsOverviewResponse)
 def get_analytics_overview(
     tournament: Optional[str] = Query(None, description="Tournament filter"),
@@ -226,8 +257,10 @@ def list_attention_metrics(
         where_clauses.append("tournament = ?")
         params.append(tournament)
     if entity_id:
-        where_clauses.append("entity_id = ?")
-        params.append(entity_id)
+        cand_ids = _resolve_entity_alias_ids(storage, entity_id)
+        placeholders = ", ".join("?" for _ in cand_ids)
+        where_clauses.append(f"entity_id IN ({placeholders})")
+        params.extend(cand_ids)
 
     where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
 
@@ -295,14 +328,17 @@ def get_entity_framing(
     framing_calc: NarrativeFramingCalculator = Depends(get_framing_calculator),
 ) -> NarrativeFramingResponse:
     """Calculates sentiment framing and publisher variance for a specific player or team."""
+    cand_ids = _resolve_entity_alias_ids(storage, entity_id)
+    placeholders = ", ".join("?" for _ in cand_ids)
+
     with storage._get_connection() as conn:
         # Check direct mentions or sentiment baseline bindings
         sent_rows = conn.execute(
-            """
+            f"""
             SELECT * FROM sentiment_baselines
-            WHERE target_entity_id = ?;
+            WHERE target_entity_id IN ({placeholders});
             """,
-            (entity_id,),
+            cand_ids,
         ).fetchall()
 
         sentiments = [dict(r) for r in sent_rows]
@@ -383,15 +419,18 @@ def get_entity_apdi(
     storage: SQLiteStorageManager = Depends(get_storage),
 ) -> APDIRecordResponse:
     """Retrieves the latest APDI record for a specific entity or returns 404."""
+    cand_ids = _resolve_entity_alias_ids(storage, entity_id)
+    placeholders = ", ".join("?" for _ in cand_ids)
+
     with storage._get_connection() as conn:
         row = conn.execute(
-            """
+            f"""
             SELECT * FROM apdi_records
-            WHERE entity_id = ?
+            WHERE entity_id IN ({placeholders})
             ORDER BY created_at_utc DESC
             LIMIT 1;
             """,
-            (entity_id,),
+            cand_ids,
         ).fetchone()
 
         if not row:

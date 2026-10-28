@@ -3,12 +3,17 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Users,
   Search,
-  UserCheck,
-  Shield,
-  Activity,
   Flame,
   Award,
   X,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  BarChart2,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 import { api, extractErrorMessage } from '../../lib/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
@@ -42,7 +47,7 @@ export const PlayersPage: React.FC = () => {
   });
 
   // Query performance stats for selected player
-  const { data: playerPerf } = useQuery({
+  const { data: playerPerf, isLoading: isLoadingPerf } = useQuery({
     queryKey: ['playerPerformance', selectedPlayer?.player_id],
     queryFn: () =>
       api.getPerformanceMetrics({
@@ -52,12 +57,26 @@ export const PlayersPage: React.FC = () => {
   });
 
   // Query media attention metrics for selected player
-  const { data: playerAtt } = useQuery({
+  const { data: playerAtt, isLoading: isLoadingAtt } = useQuery({
     queryKey: ['playerAttention', selectedPlayer?.player_id],
     queryFn: () =>
       api.getMediaAttention({
         entity_id: selectedPlayer!.player_id,
       }),
+    enabled: !!selectedPlayer,
+  });
+
+  // Query APDI evaluation for selected player
+  const { data: playerAPDI } = useQuery({
+    queryKey: ['playerAPDI', selectedPlayer?.player_id],
+    queryFn: () => api.getEntityAPDI(selectedPlayer!.player_id).catch(() => null),
+    enabled: !!selectedPlayer,
+  });
+
+  // Query sentiment framing for selected player
+  const { data: playerFraming } = useQuery({
+    queryKey: ['playerFraming', selectedPlayer?.player_id],
+    queryFn: () => api.getEntityFraming(selectedPlayer!.player_id).catch(() => null),
     enabled: !!selectedPlayer,
   });
 
@@ -74,10 +93,10 @@ export const PlayersPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-              Player Directory
+              Player Directory & Profiles
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Canonical player identities, batting/bowling profiles, and aliases.
+              Canonical player identities, match performance, media visibility, and APDI classification.
             </p>
           </div>
         </div>
@@ -87,7 +106,7 @@ export const PlayersPage: React.FC = () => {
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <input
             type="text"
-            placeholder="Search name or alias..."
+            placeholder="Search name, team, or alias..."
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -148,46 +167,62 @@ export const PlayersPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {playersData?.items.map((p) => (
-                    <TableRow
-                      key={p.player_id}
-                      className={
-                        selectedPlayer?.player_id === p.player_id
-                          ? 'bg-emerald-500/10 dark:bg-emerald-500/15'
-                          : ''
-                      }
-                    >
-                      <TableCell>
-                        <div className="font-semibold text-xs text-slate-900 dark:text-slate-100">
-                          {p.full_name}
-                        </div>
-                        {p.aliases && p.aliases.length > 0 && (
-                          <div className="text-[10px] text-slate-500 dark:text-slate-400">
-                            aka: {p.aliases.slice(0, 2).join(', ')}
+                  {playersData?.items.map((p) => {
+                    const isSelected = selectedPlayer?.player_id === p.player_id;
+                    return (
+                      <TableRow
+                        key={p.player_id}
+                        onClick={() => setSelectedPlayer(p)}
+                        className={`cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-emerald-500/10 dark:bg-emerald-500/20 font-medium'
+                            : 'hover:bg-slate-50 dark:hover:bg-cricket-navy-800/60'
+                        }`}
+                      >
+                        <TableCell>
+                          <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                            {isSelected && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            )}
+                            {p.full_name}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {p.primary_team_id || '-'}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                        {p.batting_style || '-'}
-                      </TableCell>
-                      <TableCell className="text-xs text-slate-600 dark:text-slate-400">
-                        {p.bowling_style || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedPlayer(p)}
-                          className="text-xs py-1 px-2.5 h-7"
-                        >
-                          Profile
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          {p.aliases && p.aliases.length > 0 && (
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400">
+                              aka: {p.aliases.slice(0, 2).join(', ')}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <Badge variant="neutral" className="text-[10px] py-0 px-1.5 font-semibold">
+                            {p.primary_team_id || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                          {p.batting_style || '-'}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-400">
+                          {p.bowling_style || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant={isSelected ? 'primary' : 'outline'}
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedPlayer(p);
+                            }}
+                            className={`text-xs py-1 px-2.5 h-7 ${
+                              isSelected
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                : ''
+                            }`}
+                          >
+                            Profile
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
 
@@ -225,113 +260,313 @@ export const PlayersPage: React.FC = () => {
           {/* Player Detail & Cross-Domain Metrics */}
           <div>
             <Card className="sticky top-20">
-              <CardHeader>
-                <div>
-                  <CardTitle>Player Research Profile</CardTitle>
-                  <CardDescription>
-                    {selectedPlayer
-                      ? selectedPlayer.full_name
-                      : 'Select a player to view analytics'}
-                  </CardDescription>
+              <CardHeader className="pb-3 border-b border-slate-100 dark:border-cricket-navy-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-500" />
+                      Player Research Profile
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-0.5">
+                      {selectedPlayer
+                        ? selectedPlayer.full_name
+                        : 'Click on any player to view analytics'}
+                    </CardDescription>
+                  </div>
+                  {selectedPlayer && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedPlayer(null)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
-                {selectedPlayer && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedPlayer(null)}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
               </CardHeader>
-              <CardContent className="space-y-4">
+
+              <CardContent className="pt-4 space-y-4">
                 {!selectedPlayer ? (
-                  <div className="py-12 text-center text-xs text-slate-400 dark:text-slate-500">
-                    Click "Profile" on any player to inspect objective match performance and media attention.
+                  <div className="py-14 text-center text-xs text-slate-400 dark:text-slate-500 space-y-2">
+                    <Users className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
+                    <p className="font-medium text-slate-600 dark:text-slate-400">
+                      Select a player from the directory
+                    </p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[200px] mx-auto">
+                      Click anywhere on a row or the "Profile" button to inspect performance facts and media visibility.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Identity Overview */}
                     <div className="p-3 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 space-y-2 text-xs">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between items-center">
                         <span className="text-slate-500">Player ID:</span>
-                        <span className="font-mono font-medium">{selectedPlayer.player_id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Cricsheet ID:</span>
-                        <span className="font-mono text-slate-400">
-                          {selectedPlayer.cricsheet_id || 'unlinked'}
+                        <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
+                          {selectedPlayer.player_id}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Aliases Catalog:</span>
-                        <span className="text-slate-700 dark:text-slate-300 truncate max-w-[160px]">
-                          {selectedPlayer.aliases.join(', ') || 'none'}
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Primary Team:</span>
+                        <Badge variant="neutral" className="font-semibold text-[10px] py-0 px-2">
+                          {selectedPlayer.primary_team_id || 'Free Agent'}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Batting Style:</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-medium">
+                          {selectedPlayer.batting_style || 'Unspecified'}
                         </span>
                       </div>
-                    </div>
-
-                    {/* Objective Performance Section */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        <Award className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>Objective Performance</span>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-500">Bowling Style:</span>
+                        <span className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-[170px]">
+                          {selectedPlayer.bowling_style || 'None'}
+                        </span>
                       </div>
-                      {perfRecord ? (
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="p-2 rounded bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                            <span className="text-slate-400 block text-[10px]">Runs Scored</span>
-                            <span className="font-mono font-bold text-sm">
-                              {perfRecord.runs_scored}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block">
-                              SR: {perfRecord.strike_rate ?? '-'}
-                            </span>
-                          </div>
-                          <div className="p-2 rounded bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                            <span className="text-slate-400 block text-[10px]">Wickets Taken</span>
-                            <span className="font-mono font-bold text-sm">
-                              {perfRecord.wickets_taken}
-                            </span>
-                            <span className="text-[10px] text-slate-400 block">
-                              Econ: {perfRecord.bowling_economy ?? '-'}
-                            </span>
-                          </div>
+                      {selectedPlayer.cricsheet_id && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-500">Cricsheet ID:</span>
+                          <span className="font-mono text-slate-400 text-[11px]">
+                            {selectedPlayer.cricsheet_id}
+                          </span>
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-                          No delivery performance records computed for this player.
-                        </p>
+                      )}
+                      {selectedPlayer.aliases && selectedPlayer.aliases.length > 0 && (
+                        <div className="flex justify-between items-start pt-1 border-t border-slate-100 dark:border-cricket-navy-800">
+                          <span className="text-slate-500">Aliases:</span>
+                          <span className="text-slate-700 dark:text-slate-300 text-right truncate max-w-[170px] text-[11px]">
+                            {selectedPlayer.aliases.join(', ')}
+                          </span>
+                        </div>
                       )}
                     </div>
 
-                    {/* Media Attention Section */}
+                    {/* APDI Status Badge (if available) */}
+                    {playerAPDI && (
+                      <div className="p-2.5 rounded-lg border bg-gradient-to-r from-emerald-500/5 via-blue-500/5 to-transparent border-slate-200 dark:border-cricket-navy-800 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <Target className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
+                            APDI Status
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              playerAPDI.discrepancy_category === 'OVER_ATTENDED'
+                                ? 'over_attended'
+                                : playerAPDI.discrepancy_category === 'UNDER_ATTENDED'
+                                ? 'under_attended'
+                                : playerAPDI.discrepancy_category === 'BALANCED'
+                                ? 'balanced'
+                                : 'insufficient_data'
+                            }
+                            className="text-[10px] font-semibold uppercase"
+                          >
+                            {playerAPDI.discrepancy_category.replace('_', ' ')}
+                          </Badge>
+                          {playerAPDI.apdi_value !== null && (
+                            <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                              {playerAPDI.apdi_value > 0 ? '+' : ''}
+                              {playerAPDI.apdi_value.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Objective Match Performance */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                        <div className="flex items-center gap-1.5">
+                          <Award className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Objective Performance</span>
+                        </div>
+                        {perfRecord && (
+                          <span className="text-[10px] font-normal text-slate-400 lowercase">
+                            {perfRecord.role}
+                          </span>
+                        )}
+                      </div>
+
+                      {isLoadingPerf ? (
+                        <Skeleton className="h-16 w-full" />
+                      ) : perfRecord ? (
+                        <div className="space-y-2">
+                          {/* Batting Card */}
+                          <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                              Batting Statistics
+                            </div>
+                            <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                              <div>
+                                <span className="text-[10px] text-slate-400 block">Runs</span>
+                                <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                                  {perfRecord.runs_scored}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block">Balls</span>
+                                <span className="font-mono font-medium text-xs">
+                                  {perfRecord.balls_faced}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block">SR</span>
+                                <span className="font-mono font-medium text-xs text-emerald-600 dark:text-emerald-400">
+                                  {perfRecord.strike_rate ? perfRecord.strike_rate.toFixed(1) : '-'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-slate-400 block">4s / 6s</span>
+                                <span className="font-mono text-xs">
+                                  {perfRecord.fours} / {perfRecord.sixes}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bowling Card (if bowled) */}
+                          {perfRecord.overs_bowled > 0 && (
+                            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
+                              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                                Bowling Statistics
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block">Wickets</span>
+                                  <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                    {perfRecord.wickets_taken}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block">Overs</span>
+                                  <span className="font-mono font-medium text-xs">
+                                    {perfRecord.overs_bowled.toFixed(1)}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block">Runs</span>
+                                  <span className="font-mono font-medium text-xs">
+                                    {perfRecord.runs_conceded}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] text-slate-400 block">Econ</span>
+                                  <span className="font-mono text-xs">
+                                    {perfRecord.bowling_economy ? perfRecord.bowling_economy.toFixed(2) : '-'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                            <span>Matches: {perfRecord.matches_played}</span>
+                            <span>Raw Composite: {perfRecord.raw_performance_composite.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-lg bg-slate-50/50 dark:bg-cricket-navy-950/50 border border-dashed border-slate-200 dark:border-cricket-navy-800 text-[11px] text-slate-400 dark:text-slate-500 italic text-center">
+                          No delivery events recorded for this player in current fixtures.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Media Attention Profile */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                         <Flame className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Media Attention Profile</span>
+                        <span>Media Attention & Prominence</span>
                       </div>
-                      {attRecord ? (
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="p-2 rounded bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                            <span className="text-slate-400 block text-[10px]">Raw Mentions</span>
-                            <span className="font-mono font-bold text-sm">
-                              {attRecord.raw_mention_count}
-                            </span>
+
+                      {isLoadingAtt ? (
+                        <Skeleton className="h-16 w-full" />
+                      ) : attRecord ? (
+                        <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 space-y-2">
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                              <span className="text-[10px] text-slate-400 block">Mentions</span>
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                                {attRecord.raw_mention_count}
+                              </span>
+                            </div>
+                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                              <span className="text-[10px] text-slate-400 block">Article Reach</span>
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                                {attRecord.article_reach}
+                              </span>
+                            </div>
+                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                              <span className="text-[10px] text-slate-400 block">Prominence</span>
+                              <span className="font-mono font-bold text-sm text-amber-500">
+                                {attRecord.prominence_score.toFixed(1)}
+                              </span>
+                            </div>
                           </div>
-                          <div className="p-2 rounded bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                            <span className="text-slate-400 block text-[10px]">Prominence Score</span>
-                            <span className="font-mono font-bold text-sm text-amber-500">
-                              {attRecord.prominence_score.toFixed(2)}
-                            </span>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                            <span>Publishers: {attRecord.source_diversity_count}</span>
+                            <span>Headline Mentions: {attRecord.headline_mentions}</span>
                           </div>
                         </div>
                       ) : (
-                        <p className="text-[11px] text-slate-400 dark:text-slate-500 italic">
-                          No media attention metrics recorded for this player in current tournament scope.
-                        </p>
+                        <div className="p-3 rounded-lg bg-slate-50/50 dark:bg-cricket-navy-950/50 border border-dashed border-slate-200 dark:border-cricket-navy-800 text-[11px] text-slate-400 dark:text-slate-500 italic text-center">
+                          No media attention mentions recorded for this player in current editorial corpus.
+                        </div>
                       )}
                     </div>
+
+                    {/* Editorial Sentiment Framing */}
+                    {playerFraming && playerFraming.total_framed_passages > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          <div className="flex items-center gap-1.5">
+                            <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Editorial Framing</span>
+                          </div>
+                          <Badge
+                            variant={
+                              playerFraming.net_framing_score > 0.05
+                                ? 'success'
+                                : playerFraming.net_framing_score < -0.05
+                                ? 'danger'
+                                : 'neutral'
+                            }
+                            className="text-[10px] py-0 px-1.5 font-semibold"
+                          >
+                            {playerFraming.net_framing_score > 0.05
+                              ? 'Positive'
+                              : playerFraming.net_framing_score < -0.05
+                              ? 'Critical'
+                              : 'Neutral'}
+                          </Badge>
+                        </div>
+
+                        <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 text-xs">
+                          <div className="flex items-center justify-between text-[11px] mb-1.5">
+                            <span className="text-slate-500">Net Framing Score:</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                              {playerFraming.net_framing_score > 0 ? '+' : ''}
+                              {playerFraming.net_framing_score.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                            <div className="p-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium">
+                              +{playerFraming.positive_count} Pos
+                            </div>
+                            <div className="p-1 rounded bg-slate-100 dark:bg-cricket-navy-900 text-slate-600 dark:text-slate-400 font-medium">
+                              {playerFraming.neutral_count} Neu
+                            </div>
+                            <div className="p-1 rounded bg-rose-500/10 text-rose-700 dark:text-rose-400 font-medium">
+                              -{playerFraming.negative_count} Neg
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
