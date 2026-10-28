@@ -1,9 +1,23 @@
-# Environment & Local Secrets
+# ==============================================================================
+# T20 CRICKET INTELLIGENCE PLATFORM - ACADEMIC REPOSITORY GITIGNORE
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment Variables & Secrets (Prevent Credential Leakage)
+# ------------------------------------------------------------------------------
 .env
 .env.local
+.env.*.local
 *.env
+*.pem
+*.key
+*.p12
+*.pfx
+!*.env.example
 
-# Python & Virtual Environments
+# ------------------------------------------------------------------------------
+# 2. Python Bytecode, Caches & Virtual Environments
+# ------------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
@@ -13,14 +27,14 @@ env/
 venv/
 .venv/
 ENV/
+env.bak/
+venv.bak/
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
-/lib/
-/lib64/
-!frontend/src/lib/
+.eggs/
 parts/
 sdist/
 var/
@@ -28,11 +42,29 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Research Sources Isolation (Upstream Cloned Repositories)
-research_sources/
+# Retain frontend/src/lib/ (explicit whitelist override for Python /lib pattern)
+/lib/
+/lib64/
+!frontend/src/lib/
 
-# Data Directories & Cache
+# ------------------------------------------------------------------------------
+# 3. Testing, Coverage & Profiling Caches
+# ------------------------------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# 4. Local Database Files & Cache Dumps (Re-created via Pipeline)
+# ------------------------------------------------------------------------------
 data/raw/
 data/interim/
 data/processed/
@@ -43,31 +75,70 @@ data/cache/
 *.db
 *.db-*
 *.db.bak*
+*.bak
+*.swp
+*.tmp
+*.temp
 
-# Model Checkpoints & Vectors
+# ------------------------------------------------------------------------------
+# 5. External Source Clones & Datasets
+# ------------------------------------------------------------------------------
+research_sources/
+
+# ------------------------------------------------------------------------------
+# 6. ML Model Weights, Dense Vectors & Cache Checkpoints
+# ------------------------------------------------------------------------------
 models/checkpoints/
 models/cache/
 *.pt
 *.bin
 *.onnx
+*.h5
+*.safetensors
+*.ckpt
 
-# Jupyter Notebooks Checkpoints
+# ------------------------------------------------------------------------------
+# 7. Jupyter Notebook Checkpoints
+# ------------------------------------------------------------------------------
 .ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
-# Node / Frontend (Phase 6C Dashboard)
+# ------------------------------------------------------------------------------
+# 8. Node.js & Frontend Build Outputs
+# ------------------------------------------------------------------------------
 node_modules/
 frontend/node_modules/
-.npm
-dist/
 frontend/dist/
-.vite/
 frontend/.vite/
-.next/
+frontend/.vitest_cache/
+frontend/coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
 
-# IDE & OS
+# ------------------------------------------------------------------------------
+# 9. Logs & Transient Runtime Dumps
+# ------------------------------------------------------------------------------
+*.log
+logs/
+scratch/
+tmp/
+temp/
+
+# ------------------------------------------------------------------------------
+# 10. Operating System & Editor Metadata
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 .vscode/
 .idea/
-.DS_Store
-Thumbs.db
-*.bak
-*.swp
+*.sublime-workspace
+*.sublime-project
