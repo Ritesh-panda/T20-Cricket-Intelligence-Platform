@@ -52,71 +52,71 @@ export const NarrativesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Tab Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Network className="w-5 h-5" />
+      {/* Header and Tab Selector - Apple Segmented Control */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shadow-inner">
+            <Network className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
               Topics & Narrative Intelligence
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Unsupervised semantic clustering, NER mentions, and cross-source event alignments.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 border border-slate-200 dark:border-cricket-navy-800 p-1 rounded-lg bg-slate-50 dark:bg-cricket-navy-950">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08]">
           <button
             onClick={() => setActiveTab('topics')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'topics'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Topics ({topicsData?.items?.length || 0})
           </button>
           <button
             onClick={() => setActiveTab('entities')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'entities'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Entity Mentions
           </button>
           <button
             onClick={() => setActiveTab('timeline')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'timeline'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Narrative Timeline
+            Timeline
           </button>
           <button
             onClick={() => setActiveTab('alignments')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'alignments'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            Cross-Source Alignments
+            Alignments
           </button>
         </div>
       </div>
 
-      {/* Model vs Fact Notice */}
-      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-cricket-navy-900/40 border border-slate-200 dark:border-cricket-navy-800 flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-400">
-        <Info className="w-4 h-4 shrink-0 text-emerald-500 mt-0.5" />
+      {/* Model vs Fact Notice - Apple System Glass Capsule */}
+      <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] flex items-start gap-3 text-xs text-slate-600 dark:text-slate-400">
+        <Info className="w-4 h-4 shrink-0 text-[#007AFF] mt-0.5" />
         <p>
-          <span className="font-semibold text-slate-800 dark:text-slate-200">
+          <span className="font-semibold text-slate-900 dark:text-white">
             Epistemological distinction:
           </span>{' '}
           Topic clusters and semantic embeddings group passages by statistical text similarity.

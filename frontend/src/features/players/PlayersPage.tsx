@@ -85,25 +85,25 @@ export const PlayersPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Search Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Users className="w-5 h-5" />
+      {/* Header and Search Toolbar - Apple Frosted Capsule */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#5856D6]/15 text-[#5856D6] flex items-center justify-center shadow-inner">
+            <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
               Player Directory & Profiles
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Canonical player identities, match performance, media visibility, and APDI classification.
             </p>
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search - Apple Capsule Input */}
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+          <Search className="w-4 h-4 absolute left-3.5 top-2.5 text-slate-400" />
           <input
             type="text"
             placeholder="Search name, team, or alias..."
@@ -112,7 +112,7 @@ export const PlayersPage: React.FC = () => {
               setSearch(e.target.value);
               setPage(0);
             }}
-            className="pl-9 pr-8 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full"
+            className="pl-9 pr-8 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5856D6]/30 w-full transition-all"
           />
           {search && (
             <button
@@ -120,7 +120,7 @@ export const PlayersPage: React.FC = () => {
                 setSearch('');
                 setPage(0);
               }}
-              className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -136,9 +136,9 @@ export const PlayersPage: React.FC = () => {
         />
       ) : isLoading ? (
         <Card className="p-6 space-y-3">
-          <Skeleton className="h-6 w-1/4" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-6 w-1/4 rounded-lg" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
         </Card>
       ) : playersData?.items.length === 0 ? (
         <EmptyState
@@ -175,14 +175,14 @@ export const PlayersPage: React.FC = () => {
                         onClick={() => setSelectedPlayer(p)}
                         className={`cursor-pointer transition-colors ${
                           isSelected
-                            ? 'bg-emerald-500/10 dark:bg-emerald-500/20 font-medium'
-                            : 'hover:bg-slate-50 dark:hover:bg-cricket-navy-800/60'
+                            ? 'bg-[#007AFF]/10 dark:bg-[#007AFF]/15 font-medium'
+                            : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.03]'
                         }`}
                       >
                         <TableCell>
-                          <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <div className="font-semibold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-2">
                             {isSelected && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="w-2 h-2 rounded-full bg-[#007AFF] ring-2 ring-[#007AFF]/30 animate-pulse" />
                             )}
                             {p.full_name}
                           </div>
@@ -193,7 +193,7 @@ export const PlayersPage: React.FC = () => {
                           )}
                         </TableCell>
                         <TableCell className="font-mono text-xs">
-                          <Badge variant="neutral" className="text-[10px] py-0 px-1.5 font-semibold">
+                          <Badge variant="neutral" className="text-[10px] py-0 px-2 font-semibold rounded-full">
                             {p.primary_team_id || '-'}
                           </Badge>
                         </TableCell>
@@ -211,11 +211,7 @@ export const PlayersPage: React.FC = () => {
                               e.stopPropagation();
                               setSelectedPlayer(p);
                             }}
-                            className={`text-xs py-1 px-2.5 h-7 ${
-                              isSelected
-                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                                : ''
-                            }`}
+                            className="text-xs py-1 px-3 h-7 rounded-full shadow-sm"
                           >
                             Profile
                           </Button>
@@ -257,14 +253,14 @@ export const PlayersPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Player Detail & Cross-Domain Metrics */}
+          {/* Player Detail & Cross-Domain Metrics - Apple Contact Sheet */}
           <div>
-            <Card className="sticky top-20">
-              <CardHeader className="pb-3 border-b border-slate-100 dark:border-cricket-navy-800">
+            <Card className="sticky top-20 shadow-apple-card dark:shadow-apple-card-dark rounded-2xl">
+              <CardHeader className="pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-emerald-500" />
+                      <Sparkles className="w-4 h-4 text-[#5856D6]" />
                       Player Research Profile
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
@@ -278,7 +274,7 @@ export const PlayersPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedPlayer(null)}
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -290,7 +286,7 @@ export const PlayersPage: React.FC = () => {
                 {!selectedPlayer ? (
                   <div className="py-14 text-center text-xs text-slate-400 dark:text-slate-500 space-y-2">
                     <Users className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-600" />
-                    <p className="font-medium text-slate-600 dark:text-slate-400">
+                    <p className="font-medium text-slate-700 dark:text-slate-300">
                       Select a player from the directory
                     </p>
                     <p className="text-[11px] text-slate-400 dark:text-slate-500 max-w-[200px] mx-auto">
@@ -299,8 +295,28 @@ export const PlayersPage: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    {/* Apple Contact Header (Initials Squircle) */}
+                    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-[#007AFF]/10 via-[#5856D6]/5 to-transparent border border-black/[0.05] dark:border-white/[0.08]">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#007AFF] to-[#5856D6] text-white flex items-center justify-center font-bold text-base shadow-sm">
+                        {selectedPlayer.full_name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {selectedPlayer.full_name}
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate">
+                          {selectedPlayer.primary_team_id || 'Free Agent'} • {selectedPlayer.batting_style || 'Batter'}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Identity Overview */}
-                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 space-y-2 text-xs">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Player ID:</span>
                         <span className="font-mono font-medium text-slate-800 dark:text-slate-200">
@@ -309,7 +325,7 @@ export const PlayersPage: React.FC = () => {
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-slate-500">Primary Team:</span>
-                        <Badge variant="neutral" className="font-semibold text-[10px] py-0 px-2">
+                        <Badge variant="neutral" className="font-semibold text-[10px] py-0 px-2 rounded-full">
                           {selectedPlayer.primary_team_id || 'Free Agent'}
                         </Badge>
                       </div>
@@ -334,7 +350,7 @@ export const PlayersPage: React.FC = () => {
                         </div>
                       )}
                       {selectedPlayer.aliases && selectedPlayer.aliases.length > 0 && (
-                        <div className="flex justify-between items-start pt-1 border-t border-slate-100 dark:border-cricket-navy-800">
+                        <div className="flex justify-between items-start pt-1.5 border-t border-black/[0.05] dark:border-white/[0.06]">
                           <span className="text-slate-500">Aliases:</span>
                           <span className="text-slate-700 dark:text-slate-300 text-right truncate max-w-[170px] text-[11px]">
                             {selectedPlayer.aliases.join(', ')}
@@ -345,9 +361,9 @@ export const PlayersPage: React.FC = () => {
 
                     {/* APDI Status Badge (if available) */}
                     {playerAPDI && (
-                      <div className="p-2.5 rounded-lg border bg-gradient-to-r from-emerald-500/5 via-blue-500/5 to-transparent border-slate-200 dark:border-cricket-navy-800 flex items-center justify-between text-xs">
+                      <div className="p-3 rounded-2xl border bg-black/[0.02] dark:bg-white/[0.03] border-black/[0.05] dark:border-white/[0.07] flex items-center justify-between text-xs">
                         <div className="flex items-center gap-1.5">
-                          <Target className="w-3.5 h-3.5 text-emerald-500" />
+                          <Target className="w-3.5 h-3.5 text-[#007AFF]" />
                           <span className="font-medium text-slate-700 dark:text-slate-300">
                             APDI Status
                           </span>
@@ -381,7 +397,7 @@ export const PlayersPage: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                         <div className="flex items-center gap-1.5">
-                          <Award className="w-3.5 h-3.5 text-emerald-500" />
+                          <Award className="w-3.5 h-3.5 text-[#007AFF]" />
                           <span>Objective Performance</span>
                         </div>
                         {perfRecord && (
@@ -392,34 +408,34 @@ export const PlayersPage: React.FC = () => {
                       </div>
 
                       {isLoadingPerf ? (
-                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full rounded-2xl" />
                       ) : perfRecord ? (
-                        <div className="space-y-2">
+                        <div className="space-y-2.5">
                           {/* Batting Card */}
-                          <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                          <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
+                            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                               Batting Statistics
                             </div>
                             <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                              <div>
+                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                 <span className="text-[10px] text-slate-400 block">Runs</span>
-                                <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                                <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
                                   {perfRecord.runs_scored}
                                 </span>
                               </div>
-                              <div>
+                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                 <span className="text-[10px] text-slate-400 block">Balls</span>
                                 <span className="font-mono font-medium text-xs">
                                   {perfRecord.balls_faced}
                                 </span>
                               </div>
-                              <div>
+                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                 <span className="text-[10px] text-slate-400 block">SR</span>
-                                <span className="font-mono font-medium text-xs text-emerald-600 dark:text-emerald-400">
+                                <span className="font-mono font-medium text-xs text-[#34C759]">
                                   {perfRecord.strike_rate ? perfRecord.strike_rate.toFixed(1) : '-'}
                                 </span>
                               </div>
-                              <div>
+                              <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                 <span className="text-[10px] text-slate-400 block">4s / 6s</span>
                                 <span className="font-mono text-xs">
                                   {perfRecord.fours} / {perfRecord.sixes}
@@ -430,30 +446,30 @@ export const PlayersPage: React.FC = () => {
 
                           {/* Bowling Card (if bowled) */}
                           {perfRecord.overs_bowled > 0 && (
-                            <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800">
-                              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                            <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07]">
+                              <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
                                 Bowling Statistics
                               </div>
                               <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                                <div>
+                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                   <span className="text-[10px] text-slate-400 block">Wickets</span>
-                                  <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                  <span className="font-mono font-bold text-sm text-[#34C759]">
                                     {perfRecord.wickets_taken}
                                   </span>
                                 </div>
-                                <div>
+                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                   <span className="text-[10px] text-slate-400 block">Overs</span>
                                   <span className="font-mono font-medium text-xs">
                                     {perfRecord.overs_bowled.toFixed(1)}
                                   </span>
                                 </div>
-                                <div>
+                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                   <span className="text-[10px] text-slate-400 block">Runs</span>
                                   <span className="font-mono font-medium text-xs">
                                     {perfRecord.runs_conceded}
                                   </span>
                                 </div>
-                                <div>
+                                <div className="p-2 rounded-xl bg-black/[0.02] dark:bg-white/[0.04]">
                                   <span className="text-[10px] text-slate-400 block">Econ</span>
                                   <span className="font-mono text-xs">
                                     {perfRecord.bowling_economy ? perfRecord.bowling_economy.toFixed(2) : '-'}
@@ -469,7 +485,7 @@ export const PlayersPage: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 rounded-lg bg-slate-50/50 dark:bg-cricket-navy-950/50 border border-dashed border-slate-200 dark:border-cricket-navy-800 text-[11px] text-slate-400 dark:text-slate-500 italic text-center">
+                        <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-[11px] text-slate-400 italic text-center">
                           No delivery events recorded for this player in current fixtures.
                         </div>
                       )}
@@ -478,30 +494,30 @@ export const PlayersPage: React.FC = () => {
                     {/* Media Attention Profile */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                        <Flame className="w-3.5 h-3.5 text-amber-500" />
+                        <Flame className="w-3.5 h-3.5 text-[#FF9500]" />
                         <span>Media Attention & Prominence</span>
                       </div>
 
                       {isLoadingAtt ? (
-                        <Skeleton className="h-16 w-full" />
+                        <Skeleton className="h-16 w-full rounded-2xl" />
                       ) : attRecord ? (
-                        <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 space-y-2">
+                        <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2.5">
                           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
                               <span className="text-[10px] text-slate-400 block">Mentions</span>
-                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
                                 {attRecord.raw_mention_count}
                               </span>
                             </div>
-                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
                               <span className="text-[10px] text-slate-400 block">Article Reach</span>
-                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                              <span className="font-mono font-bold text-sm text-slate-900 dark:text-white">
                                 {attRecord.article_reach}
                               </span>
                             </div>
-                            <div className="p-1.5 rounded bg-white dark:bg-cricket-navy-900 border border-slate-100 dark:border-cricket-navy-800">
+                            <div className="p-2 rounded-xl bg-white dark:bg-white/[0.05] border border-black/[0.05] dark:border-white/[0.08] shadow-sm">
                               <span className="text-[10px] text-slate-400 block">Prominence</span>
-                              <span className="font-mono font-bold text-sm text-amber-500">
+                              <span className="font-mono font-bold text-sm text-[#FF9500]">
                                 {attRecord.prominence_score.toFixed(1)}
                               </span>
                             </div>
@@ -513,7 +529,7 @@ export const PlayersPage: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="p-3 rounded-lg bg-slate-50/50 dark:bg-cricket-navy-950/50 border border-dashed border-slate-200 dark:border-cricket-navy-800 text-[11px] text-slate-400 dark:text-slate-500 italic text-center">
+                        <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-dashed border-black/[0.08] dark:border-white/[0.08] text-[11px] text-slate-400 italic text-center">
                           No media attention mentions recorded for this player in current editorial corpus.
                         </div>
                       )}
@@ -524,7 +540,7 @@ export const PlayersPage: React.FC = () => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                           <div className="flex items-center gap-1.5">
-                            <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
+                            <BarChart2 className="w-3.5 h-3.5 text-[#007AFF]" />
                             <span>Editorial Framing</span>
                           </div>
                           <Badge
@@ -535,7 +551,7 @@ export const PlayersPage: React.FC = () => {
                                 ? 'danger'
                                 : 'neutral'
                             }
-                            className="text-[10px] py-0 px-1.5 font-semibold"
+                            className="text-[10px] py-0 px-2 font-semibold"
                           >
                             {playerFraming.net_framing_score > 0.05
                               ? 'Positive'
@@ -545,22 +561,22 @@ export const PlayersPage: React.FC = () => {
                           </Badge>
                         </div>
 
-                        <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-100 dark:border-cricket-navy-800 text-xs">
-                          <div className="flex items-center justify-between text-[11px] mb-1.5">
+                        <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] text-xs">
+                          <div className="flex items-center justify-between text-[11px] mb-2">
                             <span className="text-slate-500">Net Framing Score:</span>
                             <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
                               {playerFraming.net_framing_score > 0 ? '+' : ''}
                               {playerFraming.net_framing_score.toFixed(3)}
                             </span>
                           </div>
-                          <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
-                            <div className="p-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-medium">
+                          <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                            <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-500/20">
                               +{playerFraming.positive_count} Pos
                             </div>
-                            <div className="p-1 rounded bg-slate-100 dark:bg-cricket-navy-900 text-slate-600 dark:text-slate-400 font-medium">
+                            <div className="p-1.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] text-slate-700 dark:text-slate-300 font-semibold border border-black/[0.04] dark:border-white/[0.06]">
                               {playerFraming.neutral_count} Neu
                             </div>
-                            <div className="p-1 rounded bg-rose-500/10 text-rose-700 dark:text-rose-400 font-medium">
+                            <div className="p-1.5 rounded-xl bg-rose-500/10 text-rose-700 dark:text-rose-300 font-semibold border border-rose-500/20">
                               -{playerFraming.negative_count} Neg
                             </div>
                           </div>

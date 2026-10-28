@@ -5,14 +5,22 @@ import { twMerge } from 'tailwind-merge';
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
+  variant?: 'glass' | 'elevated' | 'flat';
 }
 
-export const Card: React.FC<CardProps> = ({ children, className, ...props }) => {
+export const Card: React.FC<CardProps> = ({ children, className, variant = 'glass', ...props }) => {
+  const variantStyles = {
+    glass: 'apple-glass-card',
+    elevated: 'bg-white/95 dark:bg-[#1C1F26]/90 backdrop-blur-2xl border border-black/[0.06] dark:border-white/[0.12] shadow-apple-float',
+    flat: 'bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.04] dark:border-white/[0.06]',
+  };
+
   return (
     <div
       className={twMerge(
         clsx(
-          'rounded-xl border border-slate-200 dark:border-cricket-navy-800 bg-white dark:bg-cricket-navy-900 shadow-sm transition-all',
+          'rounded-2xl transition-all duration-200',
+          variantStyles[variant],
           className
         )
       )}
@@ -28,7 +36,7 @@ export const CardHeader: React.FC<CardProps> = ({ children, className, ...props 
     <div
       className={twMerge(
         clsx(
-          'px-5 py-4 border-b border-slate-100 dark:border-cricket-navy-800 flex items-center justify-between',
+          'px-5 py-4 border-b border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between',
           className
         )
       )}
@@ -48,7 +56,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
     <h3
       className={twMerge(
         clsx(
-          'text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight',
+          'text-sm sm:text-base font-semibold text-slate-900 dark:text-white tracking-tight',
           className
         )
       )}
@@ -67,7 +75,7 @@ export const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement
   return (
     <p
       className={twMerge(
-        clsx('text-xs text-slate-500 dark:text-slate-400 mt-0.5', className)
+        clsx('text-xs text-slate-500 dark:text-slate-400 mt-0.5 tracking-normal', className)
       )}
       {...props}
     >
@@ -89,7 +97,7 @@ export const CardFooter: React.FC<CardProps> = ({ children, className, ...props 
     <div
       className={twMerge(
         clsx(
-          'px-5 py-3 border-t border-slate-100 dark:border-cricket-navy-800 bg-slate-50/50 dark:bg-cricket-navy-900/50 rounded-b-xl',
+          'px-5 py-3.5 border-t border-black/[0.04] dark:border-white/[0.06] bg-black/[0.01] dark:bg-white/[0.02] rounded-b-2xl flex items-center justify-between text-xs',
           className
         )
       )}

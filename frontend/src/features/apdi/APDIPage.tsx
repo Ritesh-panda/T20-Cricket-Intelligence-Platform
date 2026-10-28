@@ -61,23 +61,23 @@ export const APDIPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Scale className="w-5 h-5" />
+      {/* Header and Filter Toolbar - Apple Frosted Capsule */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shadow-inner">
+            <Scale className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
               <span>Attention-to-Performance Discrepancy Index (APDI)</span>
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Measuring narrative and media coverage disproportionality against objective cricket metrics.
             </p>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Apple Pill Selects */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <select
             value={roleCohort}
@@ -85,13 +85,13 @@ export const APDIPage: React.FC = () => {
               setRoleCohort(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all font-medium cursor-pointer"
           >
-            <option value="">All Cohorts</option>
-            <option value="batter">Batters</option>
-            <option value="bowler">Bowlers</option>
-            <option value="all_rounder">All-Rounders</option>
-            <option value="team">Teams</option>
+            <option value="" className="dark:bg-[#1a1d24]">All Cohorts</option>
+            <option value="batter" className="dark:bg-[#1a1d24]">Batters</option>
+            <option value="bowler" className="dark:bg-[#1a1d24]">Bowlers</option>
+            <option value="all_rounder" className="dark:bg-[#1a1d24]">All-Rounders</option>
+            <option value="team" className="dark:bg-[#1a1d24]">Teams</option>
           </select>
 
           <select
@@ -100,13 +100,13 @@ export const APDIPage: React.FC = () => {
               setCategoryFilter(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 transition-all font-medium cursor-pointer"
           >
-            <option value="">All Categories</option>
-            <option value="OVER_ATTENDED">Over-Attended</option>
-            <option value="UNDER_ATTENDED">Under-Attended</option>
-            <option value="BALANCED">Balanced</option>
-            <option value="INSUFFICIENT_DATA">Insufficient Data</option>
+            <option value="" className="dark:bg-[#1a1d24]">All Categories</option>
+            <option value="OVER_ATTENDED" className="dark:bg-[#1a1d24]">Over-Attended</option>
+            <option value="UNDER_ATTENDED" className="dark:bg-[#1a1d24]">Under-Attended</option>
+            <option value="BALANCED" className="dark:bg-[#1a1d24]">Balanced</option>
+            <option value="INSUFFICIENT_DATA" className="dark:bg-[#1a1d24]">Insufficient Data</option>
           </select>
 
           {(roleCohort || categoryFilter) && (
@@ -118,6 +118,7 @@ export const APDIPage: React.FC = () => {
                 setCategoryFilter('');
                 setPage(0);
               }}
+              className="rounded-full w-8 h-8 p-0"
               title="Reset filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -126,53 +127,64 @@ export const APDIPage: React.FC = () => {
         </div>
       </div>
 
-      {/* APDI Methodology Explanation Panel */}
-      <Card className="bg-slate-50/70 dark:bg-cricket-navy-900/40 border-slate-200 dark:border-cricket-navy-800">
-        <CardContent className="p-4 sm:p-5 space-y-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
-            <BookOpen className="w-4 h-4 text-emerald-500" />
+      {/* APDI Methodology Explanation Panel - Apple visionOS Frosted Sheet */}
+      <Card className="rounded-2xl border-black/[0.06] dark:border-white/[0.08]">
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
+            <BookOpen className="w-4 h-4 text-[#007AFF]" />
             <span>APDI Mathematical Formulation & Cohort Normalization</span>
           </div>
-          <div className="text-xs text-slate-600 dark:text-slate-400 space-y-2 leading-relaxed">
-            <p>
-              The <strong>Attention-to-Performance Discrepancy Index (APDI)</strong> is defined as:{' '}
-              <span className="font-mono bg-white dark:bg-cricket-navy-950 px-2 py-0.5 rounded border border-slate-200 dark:border-cricket-navy-800 text-slate-900 dark:text-slate-100 font-semibold">
+          <div className="text-xs text-slate-600 dark:text-slate-400 space-y-3 leading-relaxed">
+            <p className="flex flex-wrap items-center gap-2">
+              <span>The Attention-to-Performance Discrepancy Index (APDI) is defined as:</span>
+              <span className="font-mono bg-[#007AFF]/10 text-[#007AFF] px-3 py-1 rounded-full border border-[#007AFF]/20 font-semibold tracking-tight">
                 APDI = NormAttention − NormPerformance
               </span>
-              , where both scores are percentile-normalized within their respective role cohorts
-              (e.g., batters vs. other tournament batters).
+              <span>where both scores are percentile-normalized within their respective tournament cohorts.</span>
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1">
-              <div className="p-2 rounded bg-white dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800">
-                <span className="font-semibold text-amber-600 dark:text-amber-400 block text-[11px]">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+              <div className="p-3 rounded-2xl bg-[#FF9500]/10 border border-[#FF9500]/20 transition-transform hover:-translate-y-0.5">
+                <span className="font-bold text-[#FF9500] block text-xs">
                   APDI &gt; +0.15
                 </span>
-                <span className="text-[10px] text-slate-500">
-                  Over-Attended: Media coverage significantly exceeds objective performance.
+                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block mt-1">
+                  Over-Attended
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Media visibility significantly exceeds objective performance.
                 </span>
               </div>
-              <div className="p-2 rounded bg-white dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800">
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400 block text-[11px]">
+              <div className="p-3 rounded-2xl bg-[#5856D6]/10 border border-[#5856D6]/20 transition-transform hover:-translate-y-0.5">
+                <span className="font-bold text-[#5856D6] block text-xs">
                   APDI &lt; -0.15
                 </span>
-                <span className="text-[10px] text-slate-500">
-                  Under-Attended: High objective performance received disproportionately low media.
+                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block mt-1">
+                  Under-Attended
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  High cricket performance received disproportionately low media.
                 </span>
               </div>
-              <div className="p-2 rounded bg-white dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800">
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400 block text-[11px]">
+              <div className="p-3 rounded-2xl bg-[#34C759]/10 border border-[#34C759]/20 transition-transform hover:-translate-y-0.5">
+                <span className="font-bold text-[#34C759] block text-xs">
                   -0.15 to +0.15
                 </span>
-                <span className="text-[10px] text-slate-500">
-                  Balanced: Media attention roughly mirrors cricket performance.
+                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block mt-1">
+                  Balanced
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Media attention roughly mirrors objective cricket performance.
                 </span>
               </div>
-              <div className="p-2 rounded bg-white dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800">
-                <span className="font-semibold text-slate-500 block text-[11px]">
+              <div className="p-3 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.06] dark:border-white/[0.08] transition-transform hover:-translate-y-0.5">
+                <span className="font-bold text-slate-500 block text-xs">
                   Sample &lt; Threshold
                 </span>
-                <span className="text-[10px] text-slate-500">
-                  Insufficient Data: Score is unavailable (null) to prevent misleading claims.
+                <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium block mt-1">
+                  Insufficient Data
+                </span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 block">
+                  Score is unavailable (null) to prevent statistically misleading claims.
                 </span>
               </div>
             </div>

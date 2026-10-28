@@ -8,6 +8,7 @@ type BadgeVariant =
   | 'warning'
   | 'danger'
   | 'info'
+  | 'purple'
   | 'over_attended'
   | 'under_attended'
   | 'balanced'
@@ -17,37 +18,58 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   children: React.ReactNode;
   variant?: BadgeVariant;
   className?: string;
+  dot?: boolean;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
   variant = 'neutral',
   className,
+  dot = false,
   ...props
 }) => {
-  const variantStyles: Record<BadgeVariant, string> = {
-    neutral: 'bg-slate-100 text-slate-700 dark:bg-cricket-navy-800 dark:text-slate-300 border-slate-200 dark:border-cricket-navy-700',
-    success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20',
-    danger: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20',
-    info: 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20',
-    over_attended: 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-medium',
-    under_attended: 'bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 font-medium',
-    balanced: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-medium',
-    insufficient_data: 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-700 italic font-mono text-[10px]',
+  const base =
+    'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-tight transition-colors select-none';
+
+  const variants: Record<BadgeVariant, string> = {
+    neutral:
+      'bg-black/[0.04] dark:bg-white/[0.08] text-slate-700 dark:text-slate-300 border border-black/[0.05] dark:border-white/[0.08]',
+    success:
+      'bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] border border-[#34C759]/25',
+    warning:
+      'bg-[#FF9500]/15 text-[#C97000] dark:text-[#FF9F0A] border border-[#FF9500]/25',
+    danger:
+      'bg-[#FF3B30]/15 text-[#D70015] dark:text-[#FF453A] border border-[#FF3B30]/25',
+    info:
+      'bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] border border-[#007AFF]/25',
+    purple:
+      'bg-[#AF52DE]/15 text-[#8944AB] dark:text-[#BF5AF2] border border-[#AF52DE]/25',
+    over_attended:
+      'bg-[#FF9500]/15 text-[#C97000] dark:text-[#FF9F0A] border border-[#FF9500]/30',
+    under_attended:
+      'bg-[#007AFF]/15 text-[#007AFF] dark:text-[#0A84FF] border border-[#007AFF]/30',
+    balanced:
+      'bg-[#34C759]/15 text-[#248A3D] dark:text-[#30D158] border border-[#34C759]/30',
+    insufficient_data:
+      'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20',
+  };
+
+  const dotColors: Record<BadgeVariant, string> = {
+    neutral: 'bg-slate-400',
+    success: 'bg-[#34C759]',
+    warning: 'bg-[#FF9500]',
+    danger: 'bg-[#FF3B30]',
+    info: 'bg-[#007AFF]',
+    purple: 'bg-[#AF52DE]',
+    over_attended: 'bg-[#FF9500]',
+    under_attended: 'bg-[#007AFF]',
+    balanced: 'bg-[#34C759]',
+    insufficient_data: 'bg-slate-400',
   };
 
   return (
-    <span
-      className={twMerge(
-        clsx(
-          'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border transition-colors',
-          variantStyles[variant],
-          className
-        )
-      )}
-      {...props}
-    >
+    <span className={twMerge(clsx(base, variants[variant], className))} {...props}>
+      {dot && <span className={clsx('w-1.5 h-1.5 rounded-full shrink-0', dotColors[variant])} />}
       {children}
     </span>
   );

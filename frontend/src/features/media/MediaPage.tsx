@@ -90,18 +90,18 @@ export const MediaPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Tab and Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-2 border border-slate-200 dark:border-cricket-navy-800 p-1 rounded-lg bg-slate-50 dark:bg-cricket-navy-950">
+      {/* Tab and Filter Toolbar - Apple Segmented Control */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08]">
           <button
             onClick={() => {
               setActiveTab('articles');
               setPage(0);
             }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
               activeTab === 'articles'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <Newspaper className="w-3.5 h-3.5" />
@@ -112,10 +112,10 @@ export const MediaPage: React.FC = () => {
               setActiveTab('commentary');
               setPage(0);
             }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
               activeTab === 'commentary'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
@@ -123,13 +123,13 @@ export const MediaPage: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('framing')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-2 ${
               activeTab === 'framing'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Flame className="w-3.5 h-3.5 text-amber-500" />
+            <Flame className="w-3.5 h-3.5 text-[#FF9500]" />
             <span>Narrative Framing</span>
           </button>
         </div>
@@ -144,7 +144,7 @@ export const MediaPage: React.FC = () => {
                 setSourceFilter(e.target.value);
                 setPage(0);
               }}
-              className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-56"
+              className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 w-full sm:w-56 transition-all"
             />
             {sourceFilter && (
               <Button
@@ -154,6 +154,7 @@ export const MediaPage: React.FC = () => {
                   setSourceFilter('');
                   setPage(0);
                 }}
+                className="rounded-full w-8 h-8 p-0"
               >
                 <X className="w-3.5 h-3.5" />
               </Button>
@@ -161,13 +162,13 @@ export const MediaPage: React.FC = () => {
           </div>
         ) : (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">Target Entity:</span>
+            <span className="text-xs text-slate-500 font-medium">Target Entity:</span>
             <input
               type="text"
               placeholder="Player ID (e.g. p_kohli)"
               value={entityFilter}
               onChange={(e) => setEntityFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 font-mono w-40"
+              className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 font-mono w-44 transition-all focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30"
             />
           </div>
         )}

@@ -17,20 +17,26 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const base = 'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cricket-pitch disabled:opacity-50 disabled:pointer-events-none rounded-lg';
+  const base =
+    'inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/40 disabled:opacity-40 disabled:pointer-events-none rounded-xl active:scale-[0.98] tracking-tight select-none';
 
   const variants = {
-    primary: 'bg-cricket-pitch text-white hover:bg-emerald-600 active:bg-emerald-700 shadow-sm shadow-emerald-950/20',
-    secondary: 'bg-slate-200 dark:bg-cricket-navy-800 text-slate-800 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-cricket-navy-700',
-    outline: 'border border-slate-300 dark:border-cricket-navy-700 bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-cricket-navy-800',
-    ghost: 'bg-transparent text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-cricket-navy-800',
-    danger: 'bg-rose-600 text-white hover:bg-rose-700',
+    primary:
+      'bg-gradient-to-b from-[#0A84FF] to-[#007AFF] hover:from-[#007AFF] hover:to-[#0062CC] text-white shadow-sm shadow-[#007AFF]/25 border border-white/20 font-semibold',
+    secondary:
+      'bg-black/[0.05] dark:bg-white/[0.08] text-slate-800 dark:text-slate-100 hover:bg-black/[0.08] dark:hover:bg-white/[0.12] border border-black/[0.04] dark:border-white/[0.06]',
+    outline:
+      'border border-black/[0.12] dark:border-white/[0.14] bg-white/50 dark:bg-white/[0.03] text-slate-700 dark:text-slate-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] backdrop-blur-sm',
+    ghost:
+      'bg-transparent text-slate-700 dark:text-slate-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]',
+    danger:
+      'bg-gradient-to-b from-[#FF453A] to-[#FF3B30] text-white hover:from-[#FF3B30] hover:to-[#E0241A] shadow-sm shadow-[#FF3B30]/25 font-semibold',
   };
 
   const sizes = {
     sm: 'text-xs px-2.5 py-1.5 gap-1.5',
-    md: 'text-sm px-3.5 py-2 gap-2',
-    lg: 'text-base px-4 py-2.5 gap-2.5',
+    md: 'text-xs sm:text-sm px-3.5 py-1.5 sm:py-2 gap-2',
+    lg: 'text-sm sm:text-base px-4 py-2 sm:py-2.5 gap-2.5',
   };
 
   return (
@@ -41,7 +47,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {isLoading && (
         <svg
-          className="animate-spin -ml-0.5 h-4 w-4 text-current"
+          className="animate-spin -ml-0.5 h-3.5 w-3.5 text-current"
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"

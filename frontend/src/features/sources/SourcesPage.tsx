@@ -51,49 +51,49 @@ export const SourcesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Tab Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Database className="w-5 h-5" />
+      {/* Header and Tab Selector - Apple Segmented Control */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shadow-inner">
+            <Database className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
               Data Sources & Pipeline Observability
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Immutable provenance records, crawler harvest statistics, and ingestion audit runs.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 border border-slate-200 dark:border-cricket-navy-800 p-1 rounded-lg bg-slate-50 dark:bg-cricket-navy-950">
+        <div className="flex items-center gap-1.5 p-1 rounded-full bg-black/[0.04] dark:bg-white/[0.06] border border-black/[0.05] dark:border-white/[0.08]">
           <button
             onClick={() => setActiveTab('provenance')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'provenance'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Source Provenance
           </button>
           <button
             onClick={() => setActiveTab('ingestion_runs')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'ingestion_runs'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Ingestion Runs
           </button>
           <button
             onClick={() => setActiveTab('analytics_runs')}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
               activeTab === 'analytics_runs'
-                ? 'bg-white dark:bg-cricket-navy-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-semibold'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                ? 'bg-white dark:bg-white/[0.12] text-[#007AFF] dark:text-white shadow-sm font-semibold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Analytics Batches
@@ -101,38 +101,37 @@ export const SourcesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Pipeline State Distribution Cards */}
       {pipelineStats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="p-4">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+          <Card className="p-4 rounded-2xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               Discovered URLs
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1">
+            <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
               {pipelineStats.total_discovered}
             </p>
           </Card>
-          <Card className="p-4">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+          <Card className="p-4 rounded-2xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               Crawler Attempts
             </span>
-            <p className="text-2xl font-bold font-mono text-slate-900 dark:text-slate-100 mt-1">
+            <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums mt-1">
               {pipelineStats.total_attempts}
             </p>
           </Card>
-          <Card className="p-4">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+          <Card className="p-4 rounded-2xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               HTTP Errors
             </span>
-            <p className="text-2xl font-bold font-mono text-rose-600 mt-1">
+            <p className="text-2xl font-bold tracking-tight text-[#FF3B30] tabular-nums mt-1">
               {pipelineStats.http_errors}
             </p>
           </Card>
-          <Card className="p-4">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">
+          <Card className="p-4 rounded-2xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
               Stored Entities
             </span>
-            <p className="text-2xl font-bold font-mono text-emerald-600 mt-1">
+            <p className="text-2xl font-bold tracking-tight text-[#34C759] tabular-nums mt-1">
               {Object.values(pipelineStats.entity_counts || {}).reduce((a, b) => a + b, 0)}
             </p>
           </Card>

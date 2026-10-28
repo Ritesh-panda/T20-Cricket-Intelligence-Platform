@@ -57,23 +57,23 @@ export const MatchesPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header and Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-white dark:bg-cricket-navy-900 border border-slate-200 dark:border-cricket-navy-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <Trophy className="w-5 h-5" />
+      {/* Header and Filter Toolbar - Apple Frosted Capsule */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl apple-glass-card shadow-apple-card dark:shadow-apple-card-dark">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#007AFF]/15 text-[#007AFF] flex items-center justify-center shadow-inner">
+            <Trophy className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight">
               Matches Directory
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Canonical match scorecards derived strictly from Cricsheet delivery facts.
             </p>
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Apple Pill Inputs */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <input
             type="text"
@@ -83,7 +83,7 @@ export const MatchesPage: React.FC = () => {
               setTournament(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-full sm:w-44"
+            className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 w-full sm:w-44 transition-all"
           />
           <input
             type="text"
@@ -93,7 +93,7 @@ export const MatchesPage: React.FC = () => {
               setSeason(e.target.value);
               setPage(0);
             }}
-            className="px-3 py-1.5 rounded-lg text-xs bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200 dark:border-cricket-navy-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-24"
+            className="px-3.5 py-1.5 rounded-full text-xs bg-black/[0.03] dark:bg-white/[0.05] border border-black/[0.06] dark:border-white/[0.08] text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#007AFF]/30 w-24 transition-all"
           />
           {(tournament || season) && (
             <Button
@@ -104,6 +104,7 @@ export const MatchesPage: React.FC = () => {
                 setSeason('');
                 setPage(0);
               }}
+              className="rounded-full w-8 h-8 p-0"
               title="Clear filters"
             >
               <X className="w-3.5 h-3.5" />
@@ -120,10 +121,10 @@ export const MatchesPage: React.FC = () => {
         />
       ) : isLoading ? (
         <Card className="p-6 space-y-3">
-          <Skeleton className="h-6 w-1/4" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-6 w-1/4 rounded-lg" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-10 w-full rounded-xl" />
         </Card>
       ) : matchesData?.items.length === 0 ? (
         <EmptyState
@@ -157,7 +158,7 @@ export const MatchesPage: React.FC = () => {
                       key={m.match_id}
                       className={
                         selectedMatchId === m.match_id
-                          ? 'bg-emerald-500/10 dark:bg-emerald-500/15'
+                          ? 'bg-[#007AFF]/10 dark:bg-[#007AFF]/15 font-medium'
                           : ''
                       }
                     >
@@ -192,13 +193,13 @@ export const MatchesPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
-                          variant="outline"
+                          variant={selectedMatchId === m.match_id ? 'primary' : 'outline'}
                           size="sm"
                           onClick={() => {
                             setSelectedMatchId(m.match_id);
                             setActiveInnings(1);
                           }}
-                          className="text-xs py-1 px-2.5 h-7"
+                          className="text-xs py-1 px-3 h-7 rounded-full shadow-sm"
                         >
                           Scorecard
                         </Button>
@@ -239,14 +240,14 @@ export const MatchesPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Match Scorecard Drawer */}
+          {/* Match Scorecard Drawer - Apple Sequoia Floating Card */}
           <div>
-            <Card className="sticky top-20 shadow-md">
-              <CardHeader className="pb-3 border-b border-slate-100 dark:border-cricket-navy-800">
+            <Card className="sticky top-20 shadow-apple-card dark:shadow-apple-card-dark rounded-2xl">
+              <CardHeader className="pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
                 <div className="flex items-start justify-between w-full">
                   <div>
                     <CardTitle className="text-sm font-bold flex items-center gap-2">
-                      <Trophy className="w-4 h-4 text-emerald-500" />
+                      <Trophy className="w-4 h-4 text-[#007AFF]" />
                       Detailed Match Scorecard
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
@@ -260,7 +261,7 @@ export const MatchesPage: React.FC = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => setSelectedMatchId(null)}
-                      className="h-7 w-7 p-0"
+                      className="h-7 w-7 p-0 rounded-full hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -271,23 +272,23 @@ export const MatchesPage: React.FC = () => {
               <CardContent className="pt-4 space-y-4">
                 {!selectedMatchId ? (
                   <div className="py-16 text-center text-xs text-slate-400 dark:text-slate-500">
-                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-cricket-navy-700" />
+                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300 dark:text-slate-600" />
                     Select "Scorecard" on any fixture to calculate complete batting and bowling breakdowns.
                   </div>
                 ) : isScorecardLoading ? (
                   <div className="space-y-3 py-6">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-40 w-full" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-20 w-full rounded-xl" />
+                    <Skeleton className="h-40 w-full rounded-xl" />
                   </div>
                 ) : scorecardError ? (
-                  <p className="text-xs text-rose-500 py-4 font-mono">
+                  <p className="text-xs text-[#FF3B30] py-4 font-mono">
                     {extractErrorMessage(scorecardError)}
                   </p>
                 ) : scorecard ? (
                   <div className="space-y-5">
                     {/* Match Context Pill */}
-                    <div className="p-3 rounded-lg bg-slate-50 dark:bg-cricket-navy-950 border border-slate-200/80 dark:border-cricket-navy-800 space-y-2">
+                    <div className="p-3.5 rounded-2xl bg-black/[0.02] dark:bg-white/[0.03] border border-black/[0.05] dark:border-white/[0.07] space-y-2.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                           {scorecard.venue}
@@ -297,29 +298,30 @@ export const MatchesPage: React.FC = () => {
                         </span>
                       </div>
                       {scorecard.winner_id ? (
-                        <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          🏆 {scorecard.winner_id} won match
+                        <div className="text-xs font-semibold text-[#34C759] flex items-center gap-1.5">
+                          <span>🏆</span>
+                          <span>{scorecard.winner_id} won match</span>
                         </div>
                       ) : (
                         <div className="text-xs text-slate-500">Match concluded / No result</div>
                       )}
 
-                      {/* Innings Tabs / Scores */}
+                      {/* Innings Tabs / Scores (Apple Segmented Control) */}
                       <div className="grid grid-cols-2 gap-2 pt-1">
                         {scorecard.team_scores.map((t) => (
                           <button
                             key={t.innings}
                             onClick={() => setActiveInnings(t.innings)}
-                            className={`p-2 rounded-lg text-left transition-all border ${
+                            className={`p-2.5 rounded-xl text-left transition-all border ${
                               activeInnings === t.innings
-                                ? 'bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/50 shadow-sm'
-                                : 'bg-white dark:bg-cricket-navy-900 border-slate-200 dark:border-cricket-navy-800 hover:border-slate-300'
+                                ? 'bg-white dark:bg-white/[0.1] border-black/[0.1] dark:border-white/[0.2] shadow-sm text-slate-900 dark:text-white'
+                                : 'bg-transparent border-transparent hover:bg-black/[0.03] dark:hover:bg-white/[0.04] text-slate-600 dark:text-slate-400'
                             }`}
                           >
-                            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
                               Innings {t.innings} • {t.team_id}
                             </div>
-                            <div className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100 mt-0.5">
+                            <div className="text-sm font-bold font-mono tracking-tight mt-0.5">
                               {t.total_runs}/{t.total_wickets}
                               <span className="text-[10px] font-normal text-slate-500 ml-1">
                                 ({t.legal_overs} ov)
