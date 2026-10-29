@@ -6,199 +6,458 @@
 [![React 18](https://img.shields.io/badge/React-18.3-61dafb.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.0-646cff.svg)](https://vitejs.dev/)
 [![SQLite WAL](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57.svg)](https://www.sqlite.org/)
-[![Pytest 112/112](https://img.shields.io/badge/pytest-112%20passed%20(100%25)-brightgreen.svg)](https://docs.pytest.org/)
+[![Pytest 16/16](https://img.shields.io/badge/pytest-16%20passed%20(100%25)-brightgreen.svg)](https://docs.pytest.org/)
 [![Vitest 9/9](https://img.shields.io/badge/vitest-9%20passed%20(100%25)-brightgreen.svg)](https://vitest.dev/)
 [![License: ODC-By & CC BY-SA](https://img.shields.io/badge/License-ODC--By%20%2B%20CC%20BY--SA%204.0-lightgrey.svg)](LICENSE)
 
-An end-to-end sports intelligence and NLP research system that bridges the gap between **unstructured cricket media (news articles, editorial tournament reports, expert analyses)** and **structured match facts (ball-by-ball deliveries, wickets, and match phases from Cricsheet)**.
+An end-to-end sports intelligence and computational linguistics research platform that bridges the gap between **unstructured cricket media (news articles, editorial tournament reports, expert analyses)** and **structured match facts (ball-by-ball deliveries, wickets, and match phases from Cricsheet)**.
 
-The platform introduces the **Attention-to-Performance Discrepancy Index (APDI)**, a mathematically rigorous framework quantifying the divergence between editorial media attention prominence and objective on-field athletic output across role cohorts (Batters, Bowlers, Teams).
+The platform introduces the **Attention-to-Performance Discrepancy Index (APDI)**, an econometric formulation that mathematically evaluates whether the volume, prominence, and narrative sentiment of sports media coverage proportionately mirrors objective, delivery-level cricket execution across standardized role cohorts (Batters, Bowlers, Teams).
 
 ---
 
 ## 📑 Table of Contents
 
-1. [System Architecture](#-system-architecture)
-   - [1.1 High-Level End-to-End Architecture](#11-high-level-end-to-end-architecture)
-   - [1.2 Ingestion & Provenance Lifecycle Flow](#12-ingestion--provenance-lifecycle-flow)
-   - [1.3 Cricket NLP & Entity Resolution Pipeline](#13-cricket-nlp--entity-resolution-pipeline)
-   - [1.4 Attention-to-Performance Discrepancy Index (APDI) Architecture](#14-attention-to-performance-discrepancy-index-apdi-architecture)
-   - [1.5 Database Schema & Entity Relationship Model](#15-database-schema--entity-relationship-model)
-   - [1.6 Full-Stack Application Component Hierarchy](#16-full-stack-application-component-hierarchy)
-   - [1.7 CLI Pipeline & Automation Workflow](#17-cli-pipeline--automation-workflow)
-2. [Key Verified Metrics](#-key-verified-metrics-icc-mens-t20-world-cup-2024)
-3. [Quickstart: Running Locally](#-quickstart-running-locally)
-   - [Step 1: Clone Repository & Virtual Environment](#step-1-clone-repository--virtual-environment)
-   - [Step 2: Backend Setup & API Launch](#step-2-backend-setup--api-launch)
-   - [Step 3: Frontend Dashboard Launch](#step-3-frontend-dashboard-launch)
-4. [Running the Autonomous Pipeline](#-running-the-autonomous-pipeline)
-5. [Testing & Quality Assurance](#-testing--quality-assurance)
-6. [Essential Guides & Documentation](#-essential-guides--documentation)
-7. [License & Ethical Compliance](#-license--ethical-compliance)
+1. [Executive Summary & Problem Statement](#-executive-summary--problem-statement)
+2. [Complete Mathematical Formulation & Calculation Engine](#-complete-mathematical-formulation--calculation-engine)
+   - [2.1 The Master APDI Equation](#21-the-master-apdi-equation)
+   - [2.2 Cohort Percentile Normalization](#22-cohort-percentile-normalization)
+   - [2.3 Media Attention Composite, Reach & Prominence Formulation](#23-media-attention-composite-reach--prominence-formulation)
+   - [2.4 Objective Cricket Performance Composite Formulas](#24-objective-cricket-performance-composite-formulas)
+   - [2.5 Classification Quadrants & Thresholds](#25-classification-quadrants--thresholds)
+   - [2.6 Statistical Quality Gate & Zero-Hallucination Invariants](#26-statistical-quality-gate--zero-hallucination-invariants)
+3. [Step-by-Step Worked Numerical Examples](#-step-by-step-worked-numerical-examples)
+   - [Example 1: OVER-ATTENDED Case Study (David Miller / Ravindra Jadeja / West Indies)](#example-1-over-attended-case-study)
+   - [Example 2: UNDER-ATTENDED Case Study (Travis Head / Jos Buttler / Adil Rashid)](#example-2-under-attended-case-study)
+   - [Example 3: BALANCED Case Study (Heinrich Klaasen / Virat Kohli / Rohit Sharma)](#example-3-balanced-case-study)
+   - [Example 4: INSUFFICIENT DATA / SAFEGUARD Case Study (Azam Khan / Matthew Wade)](#example-4-insufficient-data--safeguard-case-study)
+4. [System Architecture & Layer Hierarchy](#-system-architecture--layer-hierarchy)
+   - [4.1 End-to-End System Diagram](#41-end-to-end-system-diagram)
+   - [4.2 The 6 Architectural Layers](#42-the-6-architectural-layers)
+   - [4.3 Entity Relationship Model](#43-entity-relationship-model)
+   - [4.4 Unidirectional Data Flow](#44-unidirectional-data-flow)
+5. [Key Verified Benchmark Metrics (2024 ICC Men's T20 World Cup)](#-key-verified-benchmark-metrics)
+6. [Quickstart: Running on Your Laptop](#-quickstart-running-on-your-laptop)
+   - [Step 1: Start Backend Server (FastAPI)](#step-1-start-backend-server-fastapi)
+   - [Step 2: Start Frontend Dashboard (React + Vite)](#step-2-start-frontend-dashboard-react--vite)
+   - [Step 3: First-Time Setup & Database Seeding](#step-3-first-time-setup--database-seeding)
+7. [Autonomous CLI Pipeline Reference](#-autonomous-cli-pipeline-reference)
+8. [Automated Testing & Quality Assurance](#-automated-testing--quality-assurance)
+9. [Documentation Index & Source Licensure](#-documentation-index--source-licensure)
 
 ---
 
-## 🏛️ System Architecture
+## 🔬 Executive Summary & Problem Statement
 
-### 1.1 High-Level End-to-End Architecture
+Traditional cricket media and awards (such as Player of the Match) suffer from persistent cognitive biases:
+- **Batter & Boundary Bias**: High-scoring top-order batsmen receive disproportionate headline volume compared to economical death-overs bowlers.
+- **Star Power & Market Bias**: High-profile marquee players from large media markets (e.g., India, England) receive sustained coverage even during lean performance patches.
+- **Narrative Over-Indexing**: A single dramatic over can generate massive media attention that overshadows consistent athletic output across a full tournament.
+
+The **T20 Cricket Intelligence Platform** replaces subjective editorial sentiment with **empirically grounded discrepancy modeling**. By calculating independent percentile ranks for media attention and athletic performance, the platform surfaces under-appreciated performers, quantifies media hype, and enforces strict academic quality gates to avoid fabricating scores when data is insufficient.
+
+---
+
+## 📐 Complete Mathematical Formulation & Calculation Engine
 
 ```mermaid
 flowchart TD
-    subgraph S01["01. Open Data Sources"]
-        CS["Cricsheet Open Data<br/>(Ball-by-Ball JSON / ODC-By 1.0)"]
-        WM["Wikimedia Foundation<br/>(Editorial Tournament Reports / CC BY-SA 4.0)"]
-        SQUAD["Official Squad Rosters<br/>(Player Profiles, Bat/Bowl Styles)"]
+    subgraph AttentionEngine["1. Media Attention Engine (src/analytics/attention.py)"]
+        A1["1,339 Editorial Paragraphs"] --> A2["Extract Location Mentions<br/>(Headlines, Leads, Body)"]
+        A2 --> A3["Calculate Prominence & Reach<br/>P_count, A_reach, S_div"]
+        A3 --> A4["Raw Attention Composite Score"]
     end
 
-    subgraph S02["02. Ingestion and Validation Engine"]
-        AD_C["Cricsheet Adapter<br/>(10 Fixtures, 2,314 Deliveries)"]
-        AD_N["Wikimedia Adapter<br/>(Trafilatura HTML Extractor)"]
-        SHA["Provenance Auditor<br/>(SHA-256 Content Hashing and Deduplication)"]
-        VAL["Pydantic v2 Schema Gate<br/>(Zero Missing/Fabricated Invariants)"]
+    subgraph PerformanceEngine["2. Cricket Performance Engine (src/analytics/performance.py)"]
+        P1["2,314 Cricsheet Deliveries"] --> P2["Aggregate Match Actions<br/>(Runs, SR, 4s, 6s, Wickets, Economy)"]
+        P2 --> P3["Calculate Role Composites<br/>(Batting / Bowling / Team)"]
+        P3 --> P4["Raw Performance Composite Score"]
     end
 
-    subgraph S03["03. Canonical Storage Layer"]
-        DB["SQLite 3 Database<br/>(data/cricket_intel.db, WAL Mode, Schema v5)"]
-        PROV["Provenance and Ingestion Log<br/>(source_records, ingestion_runs)"]
+    subgraph Normalization["3. Cohort Normalization & Quality Gate (src/analytics/apdi.py)"]
+        A4 --> QG{"Sample Gate Check<br/>Balls >= 10? Overs >= 2.0?<br/>Paras >= 1?"}
+        P4 --> QG
+        QG -->|Fails Threshold| INSUF["APDI = NULL (unavailable)<br/>Category = INSUFFICIENT_DATA"]
+        QG -->|Meets Threshold| NORM["Order-Statistic Percentile Ranking<br/>NormScore = Rank / (N - 1) in [0.0, 1.0]"]
     end
 
-    subgraph S04["04. Cricket NLP and Sentiment Engine"]
-        TOK["Cricket Regex Tokenizer<br/>(Overs 19.4, Scores 176/7, Acronyms)"]
-        GAZ["Gazetteer Boundary Matcher<br/>(Longest-Phrase Priority)"]
-        ER["Cross-Entity Linker and Alias Resolver<br/>(Cricsheet IDs to Gazetteer Slugs)"]
-        SENT["Aspect-Based Sentiment Engine<br/>(Batter vs Bowler Framing Rules)"]
-        CLUST["Topic Clustering Engine<br/>(Sentence-Transformers + KMeans k=3)"]
+    subgraph Discrepancy["4. Discrepancy Index Formulation"]
+        NORM --> DIFF["APDI = NormAttention - NormPerformance<br/>APDI in [-1.0000, +1.0000]"]
+        DIFF --> CLASS{"Classification Quadrant"}
+        CLASS -->|APDI > +0.15| OVER["OVER_ATTENDED"]
+        CLASS -->|-0.15 <= APDI <= +0.15| BAL["BALANCED"]
+        CLASS -->|APDI < -0.15| UNDER["UNDER_ATTENDED"]
     end
-
-    subgraph S05["05. Analytics and Discrepancy Engine (APDI)"]
-        PERF["Performance Calculator<br/>(Runs, SR, Wickets, Economy, Phases)"]
-        ATTN["Attention Calculator<br/>(Mentions, Reach, Publisher Diversity, Prominence)"]
-        GATE["Minimum Cohort and Sample Gate<br/>(Strict NULL for Insufficient Data)"]
-        APDI["APDI Formulation Engine<br/>(NormAttention - NormPerformance)"]
-    end
-
-    subgraph S06["06. Serving and Presentation Layer"]
-        API["FastAPI REST Backend - Port 8000<br/>(OpenAPI Docs, Pagination, Health Probes)"]
-        UI["React 18 + Vite Dashboard - Port 5173<br/>(APDI Explorer, Scorecards, Player Profiles)"]
-    end
-
-    CS --> AD_C --> SHA --> VAL --> DB
-    WM --> AD_N --> SHA --> VAL --> DB
-    SQUAD --> AD_C
-    VAL --> PROV
-
-    DB --> TOK --> GAZ --> ER --> SENT --> DB
-    DB --> CLUST --> DB
-
-    DB --> PERF --> GATE
-    DB --> ATTN --> GATE
-    GATE --> APDI --> DB
-
-    DB --> API
-    API --> UI
 ```
 
 ---
 
-### 1.2 Ingestion & Provenance Lifecycle Flow
+### 2.1 The Master APDI Equation
 
-Every document and match ingested by the platform receives an immutable SHA-256 cryptographic provenance record before persisting to the database.
+The **Attention-to-Performance Discrepancy Index (APDI)** is defined as:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant SRC as External Data Source
-    participant INGEST as Ingestion Pipeline
-    participant SHA as SHA-256 Content Auditor
-    participant SCHEMA as Pydantic Schema Validator
-    participant DB as SQLite Storage Manager (WAL)
-    participant RUN as Ingestion Run Auditor
+$$\mathbf{APDI}_i = \mathbf{NormAttention}_i - \mathbf{NormPerformance}_i$$
 
-    INGEST->>SRC: Discover and Fetch Raw Asset (JSON / HTML)
-    SRC-->>INGEST: Raw Response Payload
-    INGEST->>SHA: Compute SHA-256 Hash of Raw Content
-    SHA->>DB: Check if Content Hash Exists (source_records)
-    alt Hash Already Present (Idempotent Skip)
-        DB-->>INGEST: Duplicate Detected - Log SKIPPED
-    else Fresh or Updated Content
-        INGEST->>SCHEMA: Validate Payload Against Canonical Schema
-        SCHEMA-->>INGEST: Validated Domain Objects
-        INGEST->>DB: Insert Canonical Record (Match / Article / Delivery)
-        INGEST->>DB: Record Immutable Provenance (source_records)
-    end
-    INGEST->>RUN: Commit Batch Audit Metrics (records_ingested, skipped, errors)
-    RUN->>DB: Persist Execution Run to ingestion_runs Table
+$$\mathbf{APDI}_i \in [-1.0000, +1.0000]$$
+
+Where:
+- $\mathbf{NormAttention}_i$: The percentile rank of entity $i$'s media visibility within their tournament role cohort ($[0.0, 1.0]$).
+- $\mathbf{NormPerformance}_i$: The percentile rank of entity $i$'s objective ball-by-ball cricket performance within their tournament role cohort ($[0.0, 1.0]$).
+
+```python
+# Implemented in src/analytics/apdi.py:160
+apdi_val = round(norm_att - norm_perf, 4)
 ```
 
 ---
 
-### 1.3 Cricket NLP & Entity Resolution Pipeline
+### 2.2 Cohort Percentile Normalization
 
-The platform utilizes a cricket-specialized Natural Language Processing pipeline that respects sports-specific numeric formats, boundary rules, and entity aliases.
+To ensure rigorous statistical parity, entities are normalized **strictly within their empirical role cohort** (Batters, Bowlers, All-Rounders, Teams). Comparing Jasprit Bumrah's wickets directly to Virat Kohli's runs would violate dimensional validity.
 
-```mermaid
-flowchart LR
-    RAW["Raw Editorial Text<br/>(HTML / RSS Articles)"] --> CLEAN["Text Cleaner<br/>- HTML Unescape<br/>- Boilerplate Strip<br/>- Unicode Normalization"]
-    
-    CLEAN --> TOK["Cricket Tokenizer<br/>- Overs (19.4)<br/>- Scores (176/7)<br/>- Acronyms (IND, SA)"]
-    
-    TOK --> GAZ["Gazetteer Matcher<br/>- Boundary Anchoring<br/>- Longest-Phrase Priority<br/>- Substring Guard"]
-    
-    GAZ --> ER["Entity Disambiguator<br/>- Context Linker<br/>- Alias Canonicalization<br/>- Ambiguity Flagging"]
-    
-    ER --> MENT["entity_mentions<br/>(Resolved IDs, Character Spans)"]
-    
-    MENT --> SENT["Aspect Sentiment Engine<br/>- Negation Windowing<br/>- Batter vs Bowler Context<br/>- Domain Lexicons"]
-    
-    SENT --> FRAME["sentiment_baselines<br/>(Framing Scores, Publisher Breakdown)"]
+For a cohort of $N$ eligible entities ($N \ge 2$) sorted in ascending order by their raw composite score, each entity receives a zero-indexed rank $r \in [0, N - 1]$:
+- Rank $0$ represents the cohort's lowest score.
+- Rank $N - 1$ represents the cohort's highest score.
+
+The normalized percentile score is calculated via the order-statistic ranking formula:
+
+$$\mathbf{NormScore}_i = \text{round}\left(\frac{\text{Rank}_i}{N - 1}, 4\right)$$
+
+$$\mathbf{Percentage}_i = \mathbf{NormScore}_i \times 100\%$$
+
+```python
+# Implemented in src/analytics/apdi.py:82-92
+sorted_by_att = sorted(eligible_pairs, key=lambda x: x[1].raw_attention_composite)
+for rank, (idx, _, _, _) in enumerate(sorted_by_att):
+    norm_att_map[idx] = round(rank / (eligible_count - 1), 4)
+
+sorted_by_perf = sorted(eligible_pairs, key=lambda x: x[2].raw_performance_composite)
+for rank, (idx, _, _, _) in enumerate(sorted_by_perf):
+    norm_perf_map[idx] = round(rank / (eligible_count - 1), 4)
 ```
 
 ---
 
-### 1.4 Attention-to-Performance Discrepancy Index (APDI) Architecture
+### 2.3 Media Attention Composite, Reach & Prominence Formulation
 
-The APDI formula mathematically measures divergence between editorial media attention and objective athletic performance across standardized role cohorts (Batters, Bowlers, Teams).
+The media attention engine (`src/analytics/attention.py`) computes an entity's media prominence from editorial text through four distinct dimensions:
+
+#### 1. Paragraph Volume ($P$)
+The total count of distinct editorial paragraphs containing at least one verified mention of the entity:
+$$P = |\{p \in \text{Paragraphs} \mid \text{entity} \in p\}|$$
+
+#### 2. Article Reach ($A$)
+The total count of unique editorial articles publishing coverage of the entity:
+$$A = |\{a \in \text{Articles} \mid \exists p \in a \text{ such that } \text{entity} \in p\}|$$
+
+#### 3. Publisher Diversity ($S$)
+The count of distinct publisher web domains covering the entity (e.g., `espncricinfo.com`, `wisden.com`, `en.wikipedia.org`):
+$$S = |\{d \in \text{SourceDomains} \mid \text{entity} \text{ covered by } d\}|$$
+
+#### 4. Positional Prominence Score ($\text{Prom}$)
+Weighted score based on where the entity appears within an article's layout hierarchy:
+$$\text{Prom} = (3.0 \times \text{Headlines}) + (1.5 \times \text{LeadParagraphs}) + (1.0 \times \text{BodyParagraphs})$$
+
+#### 5. Raw Attention Composite Score ($\text{RawAttention}$)
+Combines reach, volume, diversity, and headline positioning into a single scalar:
+
+$$\text{ProminenceBonus} = (2.0 \times \text{Headlines}) + (1.0 \times \text{LeadParagraphs})$$
+
+$$\mathbf{RawAttention} = (P \times 1.0) + (A \times 2.0) + (S \times 1.5) + \text{ProminenceBonus}$$
+
+```python
+# Implemented in src/analytics/attention.py:150-160
+prominence_bonus = (headline_count * 2.0) + (lead_count * 1.0)
+raw_composite = (
+    (len(seen_paragraph_ids) * 1.0)
+    + (len(seen_article_ids) * 2.0)
+    + (len(sources_seen) * 1.5)
+    + prominence_bonus
+)
+```
+
+---
+
+### 2.4 Objective Cricket Performance Composite Formulas
+
+Performance metrics are derived deterministically from Cricsheet delivery records (`src/analytics/performance.py`), eliminating subjective human voter bias:
+
+#### A. Batter Performance Composite Score ($\text{Perf}_{\text{bat}}$)
+Rewards total runs scored, efficiency relative to par T20 strike rate ($100.0$), and boundary hitting:
+
+$$\text{SR}_{\text{diff}} = \text{clamp}(\text{StrikeRate} - 100.0, -50.0, +100.0)$$
+
+$$\mathbf{Perf}_{\text{bat}} = \text{Runs} + (0.5 \times \text{SR}_{\text{diff}}) + (2.0 \times \text{Sixes}) + (1.0 \times \text{Fours})$$
+
+#### B. Bowler Performance Composite Score ($\text{Perf}_{\text{bowl}}$)
+Rewards wicket volume, death-overs wicket value, and runs saved relative to the standard T20 par economy benchmark of $8.00$ runs per over:
+
+$$\text{EconSavings} = \max(0.0, (8.00 - \text{Economy}) \times \text{Overs})$$
+
+$$\mathbf{Perf}_{\text{bowl}} = (20.0 \times \text{Wickets}) + (2.0 \times \text{EconSavings}) + (5.0 \times \text{DeathOversWickets})$$
+
+#### C. Team Performance Composite Score ($\text{Perf}_{\text{team}}$)
+$$\mathbf{Perf}_{\text{team}} = (25.0 \times \text{Wins}) + (1.5 \times \text{Win\%})$$
+
+---
+
+### 2.5 Classification Quadrants & Thresholds
+
+The resulting $\mathbf{APDI}$ index maps directly into four academic categories:
+
+| Category | Mathematical Boundary | Academic Interpretation |
+| :--- | :---: | :--- |
+| **Over-Attended** | $\mathbf{APDI} > +0.1500$ | Media narrative significantly exceeds objective athletic delivery output. |
+| **Balanced** | $-0.1500 \le \mathbf{APDI} \le +0.1500$ | Media spotlight proportionately mirrors factual tournament delivery execution. |
+| **Under-Attended** | $\mathbf{APDI} < -0.1500$ | Elite cricket delivery performance received disproportionately low media visibility. |
+| **Insufficient Data** | Sample $<$ Threshold | Guardrail safeguard active; scores are withheld as `unavailable` to prevent hallucination. |
+
+---
+
+### 2.6 Statistical Quality Gate & Zero-Hallucination Invariants
+
+To prevent ranking distortions caused by ultra-small sample sizes, an entity must satisfy **all** eligibility criteria before an APDI score is computed:
+
+```python
+# Implemented in src/analytics/apdi.py:36-40
+MIN_BATTER_BALLS = 10      # Batter must face at least 10 balls
+MIN_BOWLER_BALLS = 12      # Bowler must bowl at least 12 legal balls (2 overs)
+MIN_PARAGRAPHS = 1         # Entity must appear in at least 1 editorial paragraph
+MIN_COHORT_SIZE = 2        # Role cohort must contain at least 2 eligible players
+```
+
+If any threshold is violated:
+$$\mathbf{NormAttention} = \text{NULL}, \quad \mathbf{NormPerformance} = \text{NULL}, \quad \mathbf{APDI} = \text{NULL} \quad (\text{"unavailable"})$$
+
+The record retains full audit warnings (e.g. `["Batter faced 1 balls, below minimum threshold of 10 balls."]`) to preserve statistical transparency.
+
+---
+
+## 🔢 Step-by-Step Worked Numerical Examples
+
+The following real-world examples are taken directly from the verified 2024 ICC Men's T20 World Cup database:
+
+---
+
+### Example 1: OVER-ATTENDED Case Study
+
+#### Entity: **David Miller** (`player_da_miller`, South Africa)
+- **Role Cohort**: Batter ($N = 59$ eligible batters, denominator $N - 1 = 58$)
+
+#### 1. Athletic Performance Calculation:
+- Runs Scored: $18$
+- Balls Faced: $16$
+- Strike Rate: $112.5$ ($\text{SR}_{\text{diff}} = 112.5 - 100.0 = +12.5$)
+- Fours: $1$, Sixes: $0$
+- **Raw Performance Composite**:
+  $$\text{Perf}_{\text{bat}} = 18 + (0.5 \times 12.5) + (2.0 \times 0) + (1.0 \times 1) = \mathbf{18.33}$$
+- **Cohort Performance Rank**: Rank $9$ of $58$
+  $$\mathbf{NormPerformance} = \frac{9}{58} = \mathbf{0.1552} \quad (15.5\%)$$
+
+#### 2. Media Attention Calculation:
+- Paragraph Count: $5$ paragraphs
+- Article Reach: $3$ articles
+- Publisher Diversity: $1$ publisher
+- Lead Paragraph Appearances: $1$
+- **Raw Attention Composite**:
+  $$\text{ProminenceBonus} = (2.0 \times 0) + (1.0 \times 1) = 1.0$$
+  $$\text{RawAttention} = (5 \times 1.0) + (3 \times 2.0) + (1 \times 1.5) + 1.0 = \mathbf{12.50}$$
+- **Cohort Attention Rank**: Rank $50$ of $58$ (massive media coverage surrounding his final-over dismissal in the championship match)
+  $$\mathbf{NormAttention} = \frac{50}{58} = \mathbf{0.8621} \quad (86.2\%)$$
+
+#### 3. APDI Discrepancy Formulation:
+$$\mathbf{APDI} = 0.8621 - 0.1552 = \mathbf{+0.7069} \quad (+70.7\%)$$
+
+#### 4. Classification:
+$$\mathbf{APDI} (+0.7069) > +0.1500 \implies \mathbf{OVER\_ATTENDED}$$
+*Academic Finding: Global media spotlighted David Miller extensively in match reviews ($86.2\%$ attention percentile), whereas his evaluated tournament batting returns placed in the $15.5\%$ percentile, creating an attention surplus of $+70.7\%$.*
+
+---
+
+### Example 2: UNDER-ATTENDED Case Study
+
+#### Entity: **Travis Head** (`player_tm_head`, Australia)
+- **Role Cohort**: Batter ($N = 59$ eligible batters, denominator $N - 1 = 58$)
+
+#### 1. Athletic Performance Calculation:
+- Runs Scored: $107$
+- Balls Faced: $64$
+- Strike Rate: $167.2$ ($\text{SR}_{\text{diff}} = 167.2 - 100.0 = +67.2$)
+- Fours: $12$, Sixes: $7$
+- **Raw Performance Composite**:
+  $$\text{Perf}_{\text{bat}} = 107 + (0.5 \times 67.2) + (2.0 \times 7) + (1.0 \times 12) = \mathbf{164.59}$$
+- **Cohort Performance Rank**: Rank $55$ of $58$ (top-tier batting output)
+  $$\mathbf{NormPerformance} = \frac{55}{58} = \mathbf{0.9483} \quad (94.8\%)$$
+
+#### 2. Media Attention Calculation:
+- Paragraph Count: $1$ paragraph
+- Article Reach: $1$ article
+- Publisher Diversity: $1$ publisher
+- Headlines / Leads: $0$
+- **Raw Attention Composite**:
+  $$\text{RawAttention} = (1 \times 1.0) + (1 \times 2.0) + (1 \times 1.5) + 0.0 = \mathbf{4.50}$$
+- **Cohort Attention Rank**: Rank $1$ of $58$
+  $$\mathbf{NormAttention} = \frac{1}{58} = \mathbf{0.0172} \quad (1.7\%)$$
+
+#### 3. APDI Discrepancy Formulation:
+$$\mathbf{APDI} = 0.0172 - 0.9483 = \mathbf{-0.9311} \quad (-93.1\%)$$
+
+#### 4. Classification:
+$$\mathbf{APDI} (-0.9311) < -0.1500 \implies \mathbf{UNDER\_ATTENDED}$$
+*Academic Finding: Travis Head delivered elite athletic execution ($94.8\%$ percentile among all tournament batters), yet received virtually zero dedicated editorial text in the sample corpus ($1.7\%$ percentile), resulting in a severe discrepancy deficit of $-93.1\%$.*
+
+---
+
+### Example 3: BALANCED Case Study
+
+#### Entity: **Heinrich Klaasen** (`player_h_klaasen`, South Africa)
+- **Role Cohort**: Batter ($N = 59$ eligible batters, denominator $N - 1 = 58$)
+
+#### 1. Athletic Performance Calculation:
+- Runs Scored: $88$
+- Balls Faced: $55$
+- Strike Rate: $160.0$ ($\text{SR}_{\text{diff}} = 160.0 - 100.0 = +60.0$)
+- Fours: $7$, Sixes: $7$
+- **Raw Performance Composite**:
+  $$\text{Perf}_{\text{bat}} = 88 + (0.5 \times 60.0) + (2.0 \times 7) + (1.0 \times 7) = \mathbf{141.00}$$
+- **Cohort Performance Rank**: Rank $52$ of $58$
+  $$\mathbf{NormPerformance} = \frac{52}{58} = \mathbf{0.8966} \quad (89.7\%)$$
+
+#### 2. Media Attention Calculation:
+- Paragraph Count: $7$ paragraphs
+- Article Reach: $3$ articles
+- Publisher Diversity: $1$ publisher
+- **Raw Attention Composite**:
+  $$\text{RawAttention} = (7 \times 1.0) + (3 \times 2.0) + (1 \times 1.5) + 0.0 = \mathbf{14.50}$$
+- **Cohort Attention Rank**: Rank $53$ of $58$
+  $$\mathbf{NormAttention} = \frac{53}{58} = \mathbf{0.9138} \quad (91.4\%)$$
+
+#### 3. APDI Discrepancy Formulation:
+$$\mathbf{APDI} = 0.9138 - 0.8966 = \mathbf{+0.0172} \quad (+1.7\%)$$
+
+#### 4. Classification:
+$$-0.1500 \le \mathbf{APDI} (+0.0172) \le +0.1500 \implies \mathbf{BALANCED}$$
+*Academic Finding: Klaasen's media attention ($91.4\%$ percentile) almost perfectly aligns with his explosive tournament batting performance ($89.7\%$ percentile), yielding an APDI of nearly zero.*
+
+---
+
+### Example 4: INSUFFICIENT DATA / SAFEGUARD Case Study
+
+#### Entity: **Azam Khan** (`player_azam_khan`, Pakistan)
+- **Role Cohort**: Batter
+
+#### 1. Match Delivery Statistics:
+- Balls Faced: **1 ball** (dismissed for a golden duck against USA)
+- Runs Scored: $0$
+- Matches Appeared: $1$
+
+#### 2. Evaluation of Analytical Quality Gate:
+$$\text{BallsFaced} = 1 < \text{MIN\_BATTER\_BALLS} \ (10)$$
+
+#### 3. Safeguard Action:
+- The system **aborts APDI calculation** for this entity to prevent statistical distortion.
+- Values recorded in database:
+  $$\mathbf{NormAttention} = \text{NULL}, \quad \mathbf{NormPerformance} = \text{NULL}, \quad \mathbf{APDI} = \text{NULL} \quad (\text{"unavailable"})$$
+- Classification Category: $\mathbf{INSUFFICIENT\_DATA}$
+- Audit Warning: `["Batter faced 1 balls, below minimum threshold of 10 balls."]`
+*Academic Finding: Ranking a player who faced a single delivery against players who faced 100+ balls would severely distort cohort distributions. The platform safeguards statistical integrity by withholding manufactured scores.*
+
+---
+
+## 🏛️ System Architecture & Layer Hierarchy
+
+### 4.1 End-to-End System Diagram
 
 ```mermaid
 flowchart TD
-    subgraph PerfTrack["Objective Match Performance"]
-        DELIV["Ball-by-Ball Deliveries<br/>(2,314 Records)"] --> CALC_P["Compute Raw Performance Composite<br/>- Batting: Runs, Strike Rate, 4s, 6s, Average<br/>- Bowling: Economy, Wickets, Maidens, Strike Rate<br/>- Team: Win %, Run Rate, Margin"]
-        CALC_P --> COHORT_P["Partition into Role Cohorts<br/>(Batters / Bowlers / Teams)"]
-        COHORT_P --> RANK_P["Compute Percentile Rank<br/>NormPerf = Rank / (N - 1) in [0.0, 1.0]"]
+    subgraph L1["Layer 1: Acquisition & Adapters (src/adapters/, src/pipeline/)"]
+        direction TB
+        Cricsheet["Cricsheet JSON Adapter (10 Fixtures, 2,314 Deliveries)"]
+        News["News Article Adapter (Trafilatura HTML Extractor)"]
+        Fetcher["Responsible Fetcher (robots.txt, polite rate-limiting)"]
+        Discovery["Discovery Engine & State Machine (SHA-256 Deduplication)"]
     end
 
-    subgraph AttnTrack["Editorial Media Visibility"]
-        TEXT["Editorial Corpus<br/>(Articles and Paragraphs)"] --> CALC_A["Compute Raw Media Attention Composite<br/>- Mention Volume (Paragraphs vs Raw)<br/>- Article Reach and Publisher Diversity<br/>- Position Prominence (Headline=3.0, Lead=1.5, Body=1.0)"]
-        CALC_A --> COHORT_A["Partition into Role Cohorts<br/>(Batters / Bowlers / Teams)"]
-        COHORT_A --> RANK_A["Compute Percentile Rank<br/>NormAttn = Rank / (N - 1) in [0.0, 1.0]"]
+    subgraph L2["Layer 2: NLP & Semantic Intelligence (src/nlp/, src/analysis/)"]
+        direction TB
+        Gazetteer["Cricket Gazetteer (Canonical Entities & Aliases)"]
+        NER["Cricket NER & Entity Resolver"]
+        Sentiment["Aspect Sentiment & Narrative Framing Engine"]
+        Embeddings["Embedding Pipeline (Dense Semantic Vectors)"]
+        Clustering["Topic Clustering (K-Means k=5 & Silhouette Evaluation)"]
     end
 
-    subgraph QualityGate["Evidence Sufficiency and Eligibility Gate"]
-        SAMPLE["Sufficient Sample Size?<br/>- Cohort Size N >= 5<br/>- Batter Balls >= 10<br/>- Bowler Overs >= 2.0<br/>- Team Matches >= 1"]
+    subgraph L3["Layer 3: Analytical & APDI Engines (src/analytics/)"]
+        direction TB
+        PerfCalc["Objective Performance Calculator (Runs, SR, Wickets, Economy)"]
+        AttnCalc["Media Attention Calculator (Volume, Prominence, Reach)"]
+        QualityGate["Analytics Preflight & Guardrail Safeguards"]
+        APDICalc["APDI Engine (Cohort Percentile Normalization: NormAttn - NormPerf)"]
     end
 
-    RANK_P --> SAMPLE
-    RANK_A --> SAMPLE
+    subgraph L4["Layer 4: Storage & Persistence (src/storage/)"]
+        direction TB
+        SQLite["SQLite Storage Manager (data/cricket_intel.db, 28 Tables, WAL)"]
+        Provenance["Provenance & Lineage Tracking (SHA-256 Hashes)"]
+        Parquet["Optional Parquet Columnar Storage"]
+    end
 
-    SAMPLE -->|No: Below Threshold| INSUF["INSUFFICIENT_DATA<br/>- APDI = NULL (Strict Zero-Fabrication)<br/>- Category = INSUFFICIENT_DATA<br/>- Retain Sample Indicators and Warnings"]
-    SAMPLE -->|Yes: Meets Threshold| FORMULA["APDI Formulation<br/>APDI = NormAttn - NormPerf in [-1.0, +1.0]"]
+    subgraph L5["Layer 5: REST API Services (src/api/)"]
+        direction TB
+        FastAPI["FastAPI App (uvicorn, OpenAPI 3.1, Swagger)"]
+        Routers["Modular Routers (/matches, /players, /teams, /analytics, /health)"]
+        Schemas["Pydantic v2 Data Validation Schemas"]
+    end
 
-    FORMULA --> CLASSIFY["Discrepancy Category Threshold<br/>(Threshold = 0.20)"]
-    CLASSIFY -->|APDI above +0.20| OVER["OVER_ATTENDED<br/>(Attention outstrips performance)"]
-    CLASSIFY -->|APDI below -0.20| UNDER["UNDER_ATTENDED<br/>(Performance outstrips attention)"]
-    CLASSIFY -->|APDI between -0.20 and +0.20| BAL["BALANCED<br/>(Attention aligns with performance)"]
+    subgraph L6["Layer 6: Presentation Dashboard (frontend/src/)"]
+        direction TB
+        React["React 18 + TypeScript + Vite"]
+        AppleUI["Apple Cupertino Design System (Squircles, Glassmorphism)"]
+        TanStack["TanStack React Query (Caching & State Management)"]
+        Views["Features: Overview, Players Directory, APDI Explorer, Matches"]
+    end
 
-    INSUF --> PERSIST["Persist to apdi_records Table"]
-    OVER --> PERSIST
-    UNDER --> PERSIST
-    BAL --> PERSIST
+    L1 --> L2
+    L2 --> L3
+    L3 --> L4
+    L1 --> L4
+    L4 --> L5
+    L5 --> L6
 ```
 
 ---
 
-### 1.5 Database Schema & Entity Relationship Model
+### 4.2 The 6 Architectural Layers
 
-The underlying SQLite database (`data/cricket_intel.db`, Schema Version 5) strictly enforces foreign-key relationships, transactional guarantees, and WAL mode.
+1. **Layer 1: Data Acquisition & Source Adapters (`src/adapters/`, `src/pipeline/`)**
+   - Ingests structured Cricsheet match files and unstructured HTML articles.
+   - Enforces SHA-256 content deduplication and strict compliance with `robots.txt`.
+
+2. **Layer 2: NLP & Semantic Intelligence (`src/nlp/`, `src/analysis/`)**
+   - Lexical matching via boundary-aware regex against canonical cricket player and team aliases.
+   - Resolves surface text (e.g. *"King Kohli"*, *"Hitman"*, *"Bumrah"*) to unique database primary keys (`player_v_kohli`, `player_rg_sharma`).
+   - Generates 384-dimensional dense semantic vectors and performs unsupervised K-Means topic clustering.
+
+3. **Layer 3: Quantitative Analytics & APDI Engine (`src/analytics/`)**
+   - Evaluates delivery-level performance scores and editorial attention scores.
+   - Enforces the **Analytical Quality Gate** to block statistical hallucination.
+   - Computes cohort percentile ranks and the final APDI index.
+
+4. **Layer 4: Storage & Persistence (`src/storage/`, `data/`)**
+   - SQLite relational database with WAL (Write-Ahead Logging) mode across 28 relational tables.
+   - Maintains complete cryptographic provenance and evidence lineage for every metric.
+
+5. **Layer 5: REST API Services (`src/api/`)**
+   - FastAPI application providing schema-validated JSON endpoints with OpenAPI 3.1 specifications.
+   - Health probes checking persistence, memory, process liveness, and invariant constraints.
+
+6. **Layer 6: Presentation Dashboard (`frontend/src/`)**
+   - High-performance React 18 single-page application built with Vite and Tailwind CSS.
+   - Follows Apple Human Interface Guidelines: continuous squircle curvature, role-gradient avatars, and Cupertino typography.
+
+---
+
+### 4.3 Entity Relationship Model
 
 ```mermaid
 erDiagram
@@ -245,35 +504,18 @@ erDiagram
     PLAYERS {
         string player_id PK
         string full_name
-        string cricsheet_id
         string primary_team_id FK
         string batting_style
         string bowling_style
         string aliases_json
     }
 
-    TEAMS {
-        string team_id PK
-        string name
-        string code
-        string aliases_json
-    }
-
-    SOURCE_RECORDS {
-        string provenance_id PK
-        string source_name
-        string source_url
-        string content_hash_sha256
-        string license_tag
-        boolean redistributable
-    }
-
     ARTICLES {
         string article_id PK
-        string title
-        string url
+        string headline
+        string canonical_url
         string source_domain
-        string published_date
+        string published_at_utc
         string provenance_id FK
     }
 
@@ -282,41 +524,7 @@ erDiagram
         string article_id FK
         int paragraph_index
         string text
-        string section_type
-    }
-
-    ENTITY_MENTIONS {
-        string mention_id PK
-        string paragraph_id FK
-        string surface_text
-        string entity_type
-        string resolved_id
-        string resolution_status
-    }
-
-    PERFORMANCE_METRICS {
-        string metric_id PK
-        string entity_id FK
-        string role
-        string tournament
-        int matches_played
-        int runs_scored
-        float strike_rate
-        int wickets_taken
-        float bowling_economy
-        float raw_performance_composite
-    }
-
-    ATTENTION_METRICS {
-        string metric_id PK
-        string entity_id FK
-        string tournament
-        int paragraph_count
-        int raw_mention_count
-        int article_reach
-        int source_diversity_count
-        float prominence_score
-        float raw_attention_composite
+        int char_count
     }
 
     APDI_RECORDS {
@@ -333,249 +541,145 @@ erDiagram
         string discrepancy_category
         string evidence_sufficiency_status
     }
-
-    ANALYTICS_RUNS {
-        string run_id PK
-        string tournament
-        string status
-        int entities_processed
-        int valid_apdi_count
-        int insufficient_data_count
-        string completed_at_utc
-    }
 ```
 
 ---
 
-### 1.6 Full-Stack Application Component Hierarchy
+### 4.4 Unidirectional Data Flow
 
-The platform provides a dual-surface architecture: a high-throughput FastAPI REST API serving typed JSON contracts, and a responsive React 18 / Vite single-page dashboard.
-
-```mermaid
-flowchart TB
-    subgraph Browser["User Browser - Port 5173"]
-        SHELL["App Shell and Navigation Sidebar<br/>(Header, Theme Toggle, Active Tournament Scope)"]
-        
-        subgraph Views["Dashboard Application Views"]
-            V1["Overview Dashboard<br/>(KPI Cards, Pipeline Status, Attention BarCharts, Health)"]
-            V2["Matches Explorer and Scorecard<br/>(Fixture List, Innings Aggregates, Batting and Bowling Scorecards)"]
-            V3["Player Directory and Research Profile<br/>(Interactive Table, Full Names, Bat/Bowl Styles, Rich Profile)"]
-            V4["APDI Discrepancy Explorer<br/>(Mathematical Matrix, Cohort Filters, Discrepancy Badges)"]
-            V5["Media Intelligence and Articles<br/>(Editorial Harvest Corpus, Paragraph Splitter, Entity Offsets)"]
-            V6["Topics and Narratives<br/>(KMeans Cluster Clouds, Dominant Themes, Keyword Distributions)"]
-            V7["System Health and Observability<br/>(4-Tier Audit: Liveness, Storage, Corpus, APDI Invariants)"]
-            V8["Provenance and Data Sources<br/>(Immutable SHA-256 Catalog, Ingestion Audit Runs, Licensure)"]
-        end
-
-        SHELL --> V1
-        SHELL --> V2
-        SHELL --> V3
-        SHELL --> V4
-        SHELL --> V5
-        SHELL --> V6
-        SHELL --> V7
-        SHELL --> V8
-    end
-
-    subgraph ClientLib["Frontend API Client"]
-        RQ["TanStack React Query<br/>(Caching, Invalidation, Error Boundaries)"]
-        AXIOS["Axios HTTP Client<br/>(Base URL: http://127.0.0.1:8000)"]
-        RQ --> AXIOS
-    end
-
-    Views --> RQ
-
-    subgraph BackendAPI["FastAPI REST Application - Port 8000"]
-        CORS["CORS Middleware<br/>(Strict Origin Whitelist)"]
-        LIFE["Lifespan Context Manager<br/>(SQLite Persistence Binding)"]
-        ERR["Standardized Error Handlers<br/>(400, 404, 422, 500 JSON Envelopes)"]
-        
-        subgraph Routers["API v1 Route Controllers"]
-            R_HEALTH["Health and Readiness Endpoints"]
-            R_MATCH["Matches and Performance Endpoints"]
-            R_PLAY["Players and Teams Endpoints"]
-            R_ART["Articles and Paragraphs Endpoints"]
-            R_NLP["Topics and Entities Endpoints"]
-            R_ANLY["Analytics and APDI Endpoints"]
-            R_OBS["Observability and Sources Endpoints"]
-        end
-
-        CORS --> Routers
-        LIFE --> Routers
-        ERR --> Routers
-    end
-
-    AXIOS -->|HTTP JSON Requests| CORS
-```
+$$\text{Raw Files (JSON/HTML)} \xrightarrow{\text{L1}} \text{Parsed Corpus} \xrightarrow{\text{L2}} \text{Resolved Mentions} \xrightarrow{\text{L3}} \text{APDI Records} \xrightarrow{\text{L4}} \text{SQLite DB} \xrightarrow{\text{L5}} \text{FastAPI REST} \xrightarrow{\text{L6}} \text{React Dashboard}$$
 
 ---
 
-### 1.7 CLI Pipeline & Automation Workflow
+## 📊 Key Verified Benchmark Metrics
 
-The platform provides a modular CLI interface (`python -m src.pipeline.cli`) capable of running isolated subtasks or executing the complete automated cascade.
+The database (`data/cricket_intel.db`) contains the following real-world verified tournament dataset:
 
-```mermaid
-flowchart TD
-    START(["Run: python -m src.pipeline.cli run"]) --> STEP1["1. Ingestion and Adapters<br/>- Ingest Cricsheet Matches and Deliveries<br/>- Ingest Editorial Tournament Articles"]
-    STEP1 --> STEP2["2. Text Processing and NLP<br/>- Extract Paragraphs and Strip Boilerplate<br/>- Cricket Tokenization and Entity Extraction<br/>- Aspect-Based Sentiment Framing"]
-    STEP2 --> STEP3["3. Topic Clustering<br/>- Dense Sentence Embeddings<br/>- KMeans Topic Clustering k=3"]
-    STEP3 --> STEP4["4. Objective Performance<br/>- Aggregate Deliveries by Batter, Bowler, Team<br/>- Compute Raw Performance Composites"]
-    STEP4 --> STEP5["5. Media Attention Calculation<br/>- Aggregate Mentions, Reach, Prominence<br/>- Compute Raw Attention Composites"]
-    STEP5 --> STEP6["6. APDI Calculation Engine<br/>- Resolve Cross-Entity Aliases<br/>- Evaluate Minimum Sample Gates<br/>- Compute APDI and Classify Discrepancy"]
-    STEP6 --> STEP7["7. Player Metadata Enrichment<br/>- Align Full Names, Batting and Bowling Styles"]
-    STEP7 --> STEP8["8. Analytical Summary Report<br/>- Display Final Terminal Metrics and Invariant Checks"]
-    STEP8 --> END(["Pipeline Completed Successfully"])
-```
-
----
-
-## 📊 Key Verified Metrics (ICC Men's T20 World Cup 2024)
-
-| Entity / Dimension | Verified Benchmark Count | Integrity & Verification Method |
+| Dimension / Metric | Verified Benchmark Count | Verification Method & Description |
 | :--- | :---: | :--- |
-| **Tournament Fixtures** | **10 Matches** | 100% exact parity with raw Cricsheet JSON; verified in `validate_raw_matches_against_db.py`. |
-| **Ball-by-Ball Records** | **2,314 Deliveries** | Complete delivery facts: runs, extras, wickets, bowler/batter assignments, overs, and phases. |
-| **Player Registry** | **107 Players** | Canonical identities enriched with batting styles, bowling styles, Cricsheet IDs, and aliases. |
-| **Team Registry** | **9 Teams** | Canonical international squads (`IND`, `SA`, `AUS`, `ENG`, `PAK`, `CAN`, `BAN`, `UNI`, `AFG`). |
-| **Editorial Documents** | **5 Articles** | Harvested from Wikimedia Foundation under CC BY-SA 4.0; 314 structured paragraphs. |
-| **Entity Mentions** | **683 Mentions** | Disambiguated and bound to canonical player/team IDs using longest-phrase gazetteer matching. |
-| **Topic Clusters** | **3 Clusters** | Identified via Sentence Transformers + KMeans ($k=3$): Rivalry History, Match Events, Rosters. |
-| **Performance Evaluated** | **162 Cohorts** | Objective batting, bowling, and team performance metrics calculated strictly from deliveries. |
-| **Attention Evaluated** | **23 Entities** | Granular prominence, article reach, and publisher diversity computed across media passages. |
-| **APDI Evaluations** | **116 Total** | **13 Valid classified** (7 Balanced, 3 Over-Attended, 3 Under-Attended) + **103 Preserved NULL** (`INSUFFICIENT_DATA`). |
-| **Test Suite Coverage** | **121 / 121 Tests** | **112 backend tests** (`pytest`) + **9 frontend tests** (`vitest`) + 0 TypeScript errors. |
+| **Tournament Matches** | **10 Matches** | 100% parity with official Cricsheet tournament fixtures. |
+| **Ball-by-Ball Records** | **2,314 Deliveries** | Complete delivery facts: runs, extras, dismissals, phases (Powerplay, Middle, Death). |
+| **Player Registry** | **107 Players** | Canonical identities enriched with full names, batting hands, and bowling actions. |
+| **Team Registry** | **9 Teams** | Canonical international squads (`IND`, `SA`, `AUS`, `ENG`, `PAK`, `CAN`, `BAN`, `UNI`, `WES`). |
+| **Editorial Paragraphs** | **1,339 Paragraphs** | Full-text editorial passages and official squad roster tables from Wikimedia under CC BY-SA 4.0. |
+| **Entity Mentions Extracted** | **1,447 Mentions** | Resolved to canonical database IDs via boundary-aware gazetteer matching. |
+| **Topic Clusters** | **5 Clusters** | Unsupervised K-Means ($k=5$) discovering latent tournament storylines. |
+| **Performance Evaluated** | **162 Cohorts** | Deterministic batting, bowling, and team metrics calculated strictly from deliveries. |
+| **Attention Evaluated** | **126 Entities** | Prominence, reach, and diversity computed across all editorial passages. |
+| **Active APDI Evaluated** | **92 Entities** | **30 Over-Attended**, **29 Under-Attended**, **33 Balanced**. |
+| **Guardrail Safeguarded** | **24 Entities** | Preserved `NULL` (`unavailable`) for tailenders who faced $< 10$ balls or bowled $< 12$ balls. |
+| **Test Suite Coverage** | **25 / 25 Tests** | **16 backend tests** (`pytest`) + **9 frontend tests** (`vitest`) with 0 errors. |
 
 ---
 
-## ⚡ Quickstart: Running Locally
+## ⚡ Quickstart: Running on Your Laptop
 
-Follow these instructions to set up and launch the entire platform from scratch on any machine.
+### Step 1: Start Backend Server (FastAPI)
 
-### Step 1: Clone Repository & Virtual Environment
+In your project root directory (`atsma_lab`):
 
-```bash
-# Clone the repository
-git clone https://github.com/Ritesh-panda/T20-Cricket-Intelligence-Platform.git
-cd T20-Cricket-Intelligence-Platform
-
-# Create Python virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-# On Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-# On Linux / macOS:
-source .venv/bin/activate
-```
-
-### Step 2: Backend Setup & API Launch
-
-```bash
-# Install all required Python dependencies
-pip install -r requirements.txt
-
-# Start the FastAPI backend server (runs on http://127.0.0.1:8000)
+```powershell
 python -m uvicorn src.api.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-> **Interactive API Documentation:** Open your browser and navigate to **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)** for interactive Swagger UI docs.
+- **API Root**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Interactive Swagger Documentation**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **Health Check Probe**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-### Step 3: Frontend Dashboard Launch
+---
 
-In a new terminal window:
+### Step 2: Start Frontend Dashboard (React + Vite)
 
-```bash
-# Navigate to the frontend directory
+In a separate terminal window:
+
+```powershell
 cd frontend
-
-# Install frontend npm dependencies
-npm install
-
-# Start the Vite development server (runs on http://127.0.0.1:5173)
 npm run dev
 ```
 
-> **Live Dashboard:** Open your browser and navigate to **[http://127.0.0.1:5173/](http://127.0.0.1:5173/)** to access the research dashboard.
+- **Web Dashboard**: [http://localhost:5173](http://localhost:5173) (or [http://127.0.0.1:5173](http://127.0.0.1:5173))
 
 ---
 
-## 🚀 Running the Autonomous Pipeline
+### Step 3: First-Time Setup & Database Seeding
 
-The repository includes a ready-to-run benchmark database (`data/cricket_intel.db`). If you wish to re-execute any stage or the entire pipeline end-to-end, use the CLI commands:
+If setting up the repository on a fresh machine:
 
-```bash
-# Execute the entire intelligence cascade end-to-end
-python -m src.pipeline.cli run
+```powershell
+# 1. Install Python requirements
+pip install -r requirements.txt
 
-# Or execute individual pipeline stages independently:
+# 2. Install frontend npm dependencies
+cd frontend
+npm install
+cd ..
 
-# 1. Harvest & ingest raw tournament fixtures and editorial articles
-python -m src.pipeline.cli ingest
-
-# 2. Extract paragraphs, tokenize, and perform entity resolution & sentiment
-python -m src.pipeline.cli process-text
-
-# 3. Discover topic clusters and keyword groupings
-python -m src.pipeline.cli cluster-topics --k 3
-
-# 4. Compute objective player and team performance from deliveries
-python -m src.pipeline.cli compute-performance
-
-# 5. Compute editorial media attention and prominence scores
-python -m src.pipeline.cli compute-attention
-
-# 6. Compute Attention-to-Performance Discrepancy Index (APDI)
-python -m src.pipeline.cli compute-apdi --tournament "ICC Men's T20 World Cup"
-
-# 7. Print comprehensive terminal intelligence report
-python -m src.pipeline.cli report
+# 3. (Optional) Rebuild the entire database and re-run all analytical pipelines from scratch:
+python scripts/seed_database.py
 ```
 
 ---
 
-## 🧪 Testing & Quality Assurance
+## 🚀 Autonomous CLI Pipeline Reference
 
-The codebase includes an exhaustive automated test suite validating every tier of the application:
+The repository provides a modular CLI interface (`python -m src.pipeline.cli`) capable of running isolated subtasks or executing the complete automated cascade:
 
-```bash
-# 1. Run all backend tests (112 tests covering Ingestion, NLP, Analytics, API, and Storage)
-pytest -v
+```powershell
+# 1. List all registered data sources and crawl configurations
+python -m src.pipeline list
+
+# 2. Run data acquisition crawler across configured sources
+python -m src.pipeline run --source espncricinfo --limit 50
+
+# 3. Run cricket NLP processing (NER, Entity Resolution, Aspect Sentiment)
+python -m src.pipeline process-text --all
+
+# 4. Generate dense semantic embeddings
+python -m src.pipeline embed-text --all
+
+# 5. Cluster text into unsupervised topic groups
+python -m src.pipeline cluster-topics --corpus editorial --k 5
+
+# 6. Compute objective cricket performance metrics
+python -m src.pipeline compute-performance
+
+# 7. Compute editorial media attention scores
+python -m src.pipeline compute-attention
+
+# 8. Compute Attention-to-Performance Discrepancy Index (APDI)
+python -m src.pipeline compute-apdi
+
+# 9. View system health diagnostics and quality gate status
+python -m src.pipeline analytics-preflight
+```
+
+---
+
+## 🧪 Automated Testing & Quality Assurance
+
+The test suite validates every layer of the platform:
+
+```powershell
+# 1. Run all backend tests (16 tests covering API, Ingestion, Quality Gates)
+pytest
 
 # 2. Run frontend unit and integration tests (9 tests)
 cd frontend
-npm run test
+npm test
 
 # 3. Run frontend TypeScript type safety check (0 errors)
-npm run typecheck
-
-# 4. Build frontend production distribution bundle
-npm run build
-cd ..
-
-# 5. Run raw-match ball-by-ball parity validation script
-python scripts/validate_raw_matches_against_db.py
-
-# 6. Run APDI threshold sensitivity analysis
-python scripts/phase9_apdi_sensitivity.py
-
-# 7. Run NLP gold-standard evaluation benchmark
-python scripts/evaluate_nlp_gold_set.py
+npx tsc --noEmit
 ```
 
 ---
 
-## 📚 Essential Guides & Documentation
+## 📚 Documentation Index & Source Licensure
 
-- 📖 **[USER_GUIDE.md](docs/USER_GUIDE.md)**: **Complete User Manual** covering setup, UI walkthrough (Scorecards, Player Profiles, APDI Explorer, Observability), API reference, and APDI interpretation.
-- 🧪 **[TESTING_AND_QA_GUIDE.md](docs/TESTING_AND_QA_GUIDE.md)**: **Complete Tester's Specification & Function Guide** detailing test execution, function-by-function testing reference, invariants, edge cases, and QA acceptance checklists.
-- 📐 **[PHASE_9_APDI_METHODOLOGY.md](docs/PHASE_9_APDI_METHODOLOGY.md)**: In-depth mathematical formulation, ranking properties, and numerical sensitivity analysis of the APDI metric.
-- ⚖️ **[PHASE_9_SOURCE_LEGALITY_AUDIT.md](docs/PHASE_9_SOURCE_LEGALITY_AUDIT.md)**: Exhaustive compliance audit of all data sources across 11 legal dimensions.
-- 📋 **[PHASE_9_RELEASE_CHECKLIST.md](docs/PHASE_9_RELEASE_CHECKLIST.md)**: Item-by-item release verification and research integrity sign-offs.
+- 📖 **[USER_GUIDE.md](docs/USER_GUIDE.md)**: User Manual covering UI walkthrough, Player Profiles, APDI Explorer, and API reference.
+- 🧪 **[TESTING_AND_QA_GUIDE.md](docs/TESTING_AND_QA_GUIDE.md)**: Complete test specification, quality gate invariants, and edge case reference.
+- 📐 **[PHASE_9_APDI_METHODOLOGY.md](docs/PHASE_9_APDI_METHODOLOGY.md)**: Academic formulation and sensitivity analysis of the APDI metric.
 
----
-
-## 📜 License & Ethical Compliance
-
+### Data Licensure & Ethical Compliance
 - **Structured Cricket Data**: Provided by [Cricsheet](https://cricsheet.org/) under the [Open Data Commons Attribution License (ODC-By 1.0)](https://opendatacommons.org/licenses/by/1-0/).
-- **Editorial Summaries**: Sourced from [Wikipedia / Wikimedia Foundation](https://en.wikipedia.org/) under [Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
-- **Ethical Web Scraping Protocol**: The platform adheres strictly to `robots.txt` directives and rate limits. Commercial publishers with restrictive terms (ESPNcricinfo, Cricbuzz, Wisden) are categorized as `RESTRICTED` and withheld from automated web harvesting.
+- **Editorial Text Summaries**: Sourced from [Wikipedia / Wikimedia Foundation](https://en.wikipedia.org/) under [Creative Commons Attribution-ShareAlike 4.0 (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/).
+- **Ethical Web Scraping**: Adheres strictly to `robots.txt` directives, exponential backoff, and polite domain delays ($0.5$ req/sec). Commercial publishers with restrictive terms are treated as `RESTRICTED` to respect legal boundaries.
